@@ -1,12 +1,17 @@
 <template>
   <section id="about" class="section">
-    <p class="section-kicker" data-reveal>ABOUT</p>
-    <p class="about-copy" data-reveal>I WRITE SOFTWARE.</p>
-    <p class="about-copy" data-reveal>MOSTLY JAVA AND VUE.</p>
-    <p class="about-note" data-reveal>
-      I work on systems, interfaces, and the space between them.
-      I am interested in AI, developer tools, and new ways of building.
-      I like turning an idea into something that actually runs.
+    <p class="section-kicker" data-reveal>{{ t.about.kicker }}</p>
+    <p v-for="line in t.about.lines" :key="line" class="about-copy" data-reveal>
+      {{ line }}
+    </p>
+    <p v-for="note in t.about.notes" :key="note" class="about-note" data-reveal>
+      {{ note }}
     </p>
   </section>
 </template>
+
+<script setup>
+import { useLocale } from "../composables/useLocale.js";
+
+const { t } = useLocale();
+</script>

@@ -3,15 +3,15 @@
     <HeroFallback v-if="!canvasReady" />
     <HeroCanvas @ready="canvasReady = true" />
     <div class="hero-shade" />
-    <p class="scroll-cue">SCROLL</p>
+    <p class="scroll-cue">{{ t.hero.scroll }}</p>
     <div class="hero-copy" :style="shift">
       <h1 class="hero-brand">
         CRESTALEE<span class="reg">®</span>
       </h1>
       <div class="hero-meta">
-        <p>{{ site.role }}<br />{{ site.stackLine }}</p>
+        <p>{{ t.hero.role }}<br />{{ t.hero.stack }}</p>
         <p class="manifesto">
-          {{ site.manifesto[0] }}<br />{{ site.manifesto[1] }}
+          {{ t.hero.manifesto[0] }}<br />{{ t.hero.manifesto[1] }}
         </p>
       </div>
     </div>
@@ -20,9 +20,11 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref } from "vue";
-import { site } from "../data/site.js";
 import HeroCanvas from "./HeroCanvas.vue";
 import HeroFallback from "./HeroFallback.vue";
+import { useLocale } from "../composables/useLocale.js";
+
+const { t } = useLocale();
 
 const canvasReady = ref(false);
 

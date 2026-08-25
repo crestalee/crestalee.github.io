@@ -1,8 +1,9 @@
 <template>
   <section id="work" class="section">
-    <p class="section-kicker" data-reveal>SELECTED WORK</p>
-    <article v-if="!projects.length" class="work-empty" data-reveal>
-      NOTHING PUBLIC YET.
+    <p class="section-kicker" data-reveal>{{ t.work.kicker }}</p>
+    <article v-if="!projects.length" data-reveal>
+      <p class="work-empty">{{ t.work.empty }}</p>
+      <p class="about-note">{{ t.work.emptyNote }}</p>
     </article>
     <article v-for="item in projects" :key="item.id" class="work-item" data-reveal>
       <span class="work-index">{{ item.index }}</span>
@@ -16,7 +17,7 @@
         <div class="work-foot">
           <p class="work-stack">{{ item.stack.join("  /  ") }}</p>
           <a v-if="item.href" class="work-link" :href="item.href" target="_blank" rel="noreferrer">
-            VIEW PROJECT ↗
+            {{ t.work.view }}
           </a>
         </div>
       </div>
@@ -26,4 +27,7 @@
 
 <script setup>
 import { projects } from "../data/projects.js";
+import { useLocale } from "../composables/useLocale.js";
+
+const { t } = useLocale();
 </script>
