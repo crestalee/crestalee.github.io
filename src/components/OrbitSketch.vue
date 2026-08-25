@@ -17,6 +17,8 @@ onMounted(() => {
   let angle = 0;
   let pull = { x: 0, y: 0 };
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const rings = [0.42, 0.62, 0.82, 1];
+  const bodies = 14;
 
   const resize = () => {
     const rect = canvas.getBoundingClientRect();
@@ -28,38 +30,41 @@ onMounted(() => {
 
   const draw = () => {
     const { width, height } = canvas.getBoundingClientRect();
-    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = "rgba(1,1,4,0.28)";
+    ctx.fillRect(0, 0, width, height);
     const cx = width * 0.5 + pull.x;
     const cy = height * 0.5 + pull.y;
-    const radius = Math.min(width, height) * 0.28;
+    const radius = Math.min(width, height) * 0.3;
 
-    ctx.strokeStyle = "rgba(243,243,238,0.2)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-    ctx.stroke();
-
-    ctx.fillStyle = "#c8ccd4";
-    ctx.beginPath();
-    ctx.arc(cx, cy, 7, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "rgba(78,140,255,0.35)";
-    ctx.beginPath();
-    ctx.arc(cx - 2, cy - 2, 11, 0, Math.PI * 2);
-    ctx.fill();
-
-    for (let i = 0; i < 3; i += 1) {
-      const a = angle * (0.7 + i * 0.18) + i * 1.7;
-      const r = radius * (0.55 + i * 0.22);
-      const x = cx + Math.cos(a) * r;
-      const y = cy + Math.sin(a) * r * 0.62;
-      ctx.fillStyle = i === 0 ? "#4e8cff" : "rgba(243,243,238,0.7)";
+    rings.forEach((scale, i) => {
+      ctx.strokeStyle = i === 2 ? "rgba(78,140,255,0.28)" : "rgba(243,243,238,0.14)";
+      ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.arc(x, y, i === 0 ? 3.2 : 2, 0, Math.PI * 2);
+      ctx.ellipse(cx, cy, radius * scale, radius * scale * 0.58, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    });
+
+    ctx.fillStyle = "#d5d8de";
+    ctx.beginPath();
+    ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(78,140,255,0.28)";
+    ctx.beginPath();
+    ctx.arc(cx - 1, cy - 1, 12, 0, Math.PI * 2);
+    ctx.fill();
+
+    for (let i = 0; i < bodies; i += 1) {
+      const ring = rings[i % rings.length];
+      const a = angle * (0.55 + (i % 4) * 0.16) + i * 0.7;
+      const x = cx + Math.cos(a) * radius * ring;
+      const y = cy + Math.sin(a) * radius * ring * 0.58;
+      ctx.fillStyle = i % 4 === 0 ? "#4e8cff" : "rgba(243,243,238,0.75)";
+      ctx.beginPath();
+      ctx.arc(x, y, i % 4 === 0 ? 2.8 : 1.6, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    if (!reduced) angle += 0.008;
+    if (!reduced) angle += 0.007;
     pull.x *= 0.94;
     pull.y *= 0.94;
     if (running && !reduced) raf = requestAnimationFrame(draw);
@@ -67,8 +72,8 @@ onMounted(() => {
 
   const onMove = (event) => {
     const rect = canvas.getBoundingClientRect();
-    pull.x = ((event.clientX - rect.left) / rect.width - 0.5) * 36;
-    pull.y = ((event.clientY - rect.top) / rect.height - 0.5) * 24;
+    pull.x = ((event.clientX - rect.left) / rect.width - 0.5) * 48;
+    pull.y = ((event.clientY - rect.top) / rect.height - 0.5) * 30;
   };
 
   const start = () => {
@@ -83,7 +88,7 @@ onMounted(() => {
 
   resize();
   window.addEventListener("resize", resize);
-  canvas.addEventListener("pointermove", onMove, { passive: true });
+  window.addEventListener("pointermove", onMove, { passive: true });
   const io = new IntersectionObserver(
     ([entry]) => {
       if (entry.isIntersecting) start();
@@ -98,7 +103,7 @@ onMounted(() => {
     stop();
     io.disconnect();
     window.removeEventListener("resize", resize);
-    canvas.removeEventListener("pointermove", onMove);
+    window.removeEventListener("pointermove", onMove);
   };
 });
 

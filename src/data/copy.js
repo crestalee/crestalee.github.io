@@ -10,16 +10,21 @@ export const copy = {
       about: "About",
     },
     hero: {
+      index: "00",
+      system: "System",
+      live: "Live",
       role: "Software engineer",
       stack: "Java  ·  Vue  ·  AI",
       manifesto: ["I finish systems that have to run.", "The rest of the night is mine."],
-      scroll: "Scroll",
+      scroll: "Enter",
     },
     work: {
       kicker: "Work",
+      stamp: "Restricted",
       empty: "Nothing I can open yet.",
       emptyNote:
         "The systems I ship belong to the company. I will not invent a public portfolio to fill this space. When something is actually mine to show, it goes here.",
+      seal: "Closed source",
       view: "View project ↗",
     },
     practice: {
@@ -68,10 +73,16 @@ export const copy = {
           name: "ORBIT",
           note: "A quiet orbit. Drag to disturb it.",
         },
+        {
+          index: "04",
+          name: "TRACE",
+          note: "Points find each other when your hand gets close.",
+        },
       ],
     },
     technology: {
       kicker: "Stack",
+      intro: "The tools I actually open.",
     },
     about: {
       kicker: "About",
@@ -80,6 +91,11 @@ export const copy = {
         "I spend my days finishing systems: the service, the page, the deploy. Java and Vue are what I know best. Databases and queues are in the same week as the buttons.",
         "AI is a tool I pay for and use. It is not a personality, and it is not a company I started.",
         "Work stays behind a wall I do not own. This site is the part I can stand in public. If it feels unfinished, that is because I would rather leave a gap than write a lie.",
+      ],
+      facts: [
+        { k: "Day", v: "Java / Vue" },
+        { k: "Night", v: "WebGL / AI" },
+        { k: "Mode", v: "Building" },
       ],
     },
     contact: {
@@ -104,16 +120,21 @@ export const copy = {
       about: "关于",
     },
     hero: {
+      index: "00",
+      system: "系统",
+      live: "在线",
       role: "软件工程师",
       stack: "Java  ·  Vue  ·  AI",
       manifesto: ["把系统写到能上线。", "其余时间，留给自己。"],
-      scroll: "往下",
+      scroll: "进入",
     },
     work: {
       kicker: "作品",
+      stamp: "未公开",
       empty: "还没有能拿出来的。",
       emptyNote:
         "现在做的系统属于公司，不能开源，我也不会为了填这个栏目去编一个作品集。真有能公开的，会写在这里。空着，是因为不想说谎。",
+      seal: "闭源",
       view: "查看项目 ↗",
     },
     practice: {
@@ -161,10 +182,16 @@ export const copy = {
           name: "ORBIT",
           note: "一条安静的轨道。拖一下，它会乱一会儿。",
         },
+        {
+          index: "04",
+          name: "TRACE",
+          note: "手靠近时，点会自己连成线。",
+        },
       ],
     },
     technology: {
       kicker: "技术",
+      intro: "我真正会打开的那些。",
     },
     about: {
       kicker: "关于",
@@ -173,6 +200,11 @@ export const copy = {
         "白天把系统做完：服务、页面、发布。Java 和 Vue 最熟，数据库和队列也在同一周里。",
         "AI 是我自己用的工具，不是人设，更不是我创办的公司。",
         "公司项目不能公开。这个站是我能站在外面的部分。如果看起来空，是因为空着也比编故事强。",
+      ],
+      facts: [
+        { k: "白天", v: "Java / Vue" },
+        { k: "夜里", v: "WebGL / AI" },
+        { k: "状态", v: "在写" },
       ],
     },
     contact: {

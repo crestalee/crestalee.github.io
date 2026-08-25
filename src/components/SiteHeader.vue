@@ -3,9 +3,9 @@
     <a class="header-mark" href="#top">{{ site.mark }}</a>
     <div class="header-end">
       <nav>
-        <a href="#work">{{ t.nav.work }}</a>
-        <a href="#practice">{{ t.nav.practice }}</a>
         <a href="#experiments">{{ t.nav.lab }}</a>
+        <a href="#practice">{{ t.nav.practice }}</a>
+        <a href="#work">{{ t.nav.work }}</a>
         <a href="#technology">{{ t.nav.tech }}</a>
         <a href="#about">{{ t.nav.about }}</a>
       </nav>

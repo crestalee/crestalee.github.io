@@ -188,8 +188,33 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
   );
   moon.position.set(mobile ? 0 : 1.15, 0.18, 0);
 
+  const atmosphere = new THREE.Mesh(
+    new THREE.SphereGeometry(1.36, mobile ? 48 : 80, mobile ? 48 : 80),
+    new THREE.ShaderMaterial({
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.BackSide,
+      vertexShader: `
+        varying vec3 vNormal;
+        void main() {
+          vNormal = normalize(normalMatrix * normal);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vNormal;
+        void main() {
+          float rim = pow(0.62 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 3.4);
+          gl_FragColor = vec4(0.52, 0.6, 0.78, clamp(rim * 0.28, 0.0, 0.28));
+        }
+      `,
+    }),
+  );
+  atmosphere.position.copy(moon.position);
+
   const world = new THREE.Group();
-  world.add(moon);
+  world.add(moon, atmosphere);
   scene.add(world);
 
   const meteorCount = 16;
@@ -271,6 +296,7 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
       moon.rotation.y = time * 0.02;
       world.position.y = Math.sin(time * 0.22) * 0.04 - scroll * 1.1;
       world.position.x = (mobile ? 0 : 0.15) + pointer.x * 0.18;
+      sun.position.set(-5.6 + pointer.x * 2.4, 2 + pointer.y * 1.6, 3.2);
       tickMeteor(delta);
     }
 

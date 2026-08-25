@@ -17,8 +17,8 @@ onMounted(() => {
 
   const pointer = { x: 0.5, y: 0.5 };
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const cols = window.innerWidth < 820 ? 14 : 22;
-  const rows = window.innerWidth < 820 ? 10 : 14;
+  const cols = window.innerWidth < 820 ? 16 : 28;
+  const rows = window.innerWidth < 820 ? 12 : 18;
 
   const resize = () => {
     const rect = canvas.getBoundingClientRect();
@@ -30,11 +30,17 @@ onMounted(() => {
 
   const draw = () => {
     const { width, height } = canvas.getBoundingClientRect();
-    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = "rgba(1,1,4,0.22)";
+    ctx.fillRect(0, 0, width, height);
     const gapX = width / (cols + 1);
     const gapY = height / (rows + 1);
     const mx = pointer.x * width;
     const my = pointer.y * height;
+
+    ctx.beginPath();
+    ctx.strokeStyle = "rgba(78,140,255,0.18)";
+    ctx.arc(mx, my, 46, 0, Math.PI * 2);
+    ctx.stroke();
 
     for (let y = 1; y <= rows; y += 1) {
       for (let x = 1; x <= cols; x += 1) {
@@ -44,10 +50,10 @@ onMounted(() => {
         const dy = my - py;
         const dist = Math.hypot(dx, dy) || 1;
         const angle = Math.atan2(dy, dx);
-        const near = Math.max(0, 1 - dist / 220);
-        const len = 7 + near * 10;
-        ctx.strokeStyle = near > 0.18 ? `rgba(78, 140, 255, ${0.25 + near * 0.6})` : "rgba(243,243,238,0.22)";
-        ctx.lineWidth = 1;
+        const near = Math.max(0, 1 - dist / 240);
+        const len = 8 + near * 14;
+        ctx.strokeStyle = near > 0.16 ? `rgba(78, 140, 255, ${0.28 + near * 0.65})` : "rgba(243,243,238,0.2)";
+        ctx.lineWidth = near > 0.4 ? 1.35 : 1;
         ctx.beginPath();
         ctx.moveTo(px - Math.cos(angle) * len, py - Math.sin(angle) * len);
         ctx.lineTo(px + Math.cos(angle) * len, py + Math.sin(angle) * len);
@@ -75,7 +81,7 @@ onMounted(() => {
 
   resize();
   window.addEventListener("resize", resize);
-  canvas.addEventListener("pointermove", onMove, { passive: true });
+  window.addEventListener("pointermove", onMove, { passive: true });
   io = new IntersectionObserver(([entry]) => {
     if (entry.isIntersecting) start();
     else stop();
@@ -87,7 +93,7 @@ onMounted(() => {
     stop();
     io?.disconnect();
     window.removeEventListener("resize", resize);
-    canvas.removeEventListener("pointermove", onMove);
+    window.removeEventListener("pointermove", onMove);
   };
 });
 

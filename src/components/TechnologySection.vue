@@ -1,6 +1,7 @@
 <template>
   <section id="technology" class="section">
     <p class="section-kicker" data-reveal>{{ t.technology.kicker }}</p>
+    <p class="section-intro" data-reveal>{{ t.technology.intro }}</p>
     <ul class="tech-list">
       <li v-for="item in technologies" :key="item.name" class="tech-item" data-reveal>
         <span class="tech-name">{{ item.name }}</span>

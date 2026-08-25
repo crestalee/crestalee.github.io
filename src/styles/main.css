@@ -44,6 +44,11 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+::selection {
+  background: #4e8cff;
+  color: #010104;
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -153,6 +158,76 @@ img {
   display: block;
 }
 
+.frame {
+  position: fixed;
+  inset: 0.7rem;
+  z-index: 25;
+  pointer-events: none;
+}
+
+.frame-corner {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border: 1px solid rgba(243, 243, 238, 0.42);
+}
+
+.frame-corner.is-tl {
+  top: 0;
+  left: 0;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.frame-corner.is-tr {
+  top: 0;
+  right: 0;
+  border-left: 0;
+  border-bottom: 0;
+}
+
+.frame-corner.is-bl {
+  bottom: 0;
+  left: 0;
+  border-right: 0;
+  border-top: 0;
+}
+
+.frame-corner.is-br {
+  bottom: 0;
+  right: 0;
+  border-left: 0;
+  border-top: 0;
+}
+
+.frame-readout {
+  position: absolute;
+  left: 1.6rem;
+  bottom: 0.15rem;
+  display: flex;
+  gap: 1.2rem;
+  font-family: var(--display);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: rgba(243, 243, 238, 0.42);
+}
+
+.frame-progress {
+  position: absolute;
+  top: 0;
+  left: 1.8rem;
+  right: 1.8rem;
+  height: 1px;
+  background: rgba(243, 243, 238, 0.08);
+}
+
+.frame-progress i {
+  display: block;
+  height: 100%;
+  background: #4e8cff;
+  transform-origin: left center;
+}
+
 .hero {
   position: relative;
   z-index: 1;
@@ -168,11 +243,35 @@ img {
     linear-gradient(180deg, rgba(1, 1, 4, 0.12) 0%, transparent 30%, transparent 58%, rgba(1, 1, 4, 0.62) 100%);
 }
 
+.hero-hud,
+.hero-status {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  gap: 0.9rem;
+  font-family: var(--display);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.hero-hud {
+  left: var(--pad);
+  top: 18vh;
+}
+
+.hero-status {
+  left: var(--pad);
+  bottom: 2.4rem;
+}
+
 .hero-copy {
   position: absolute;
   left: var(--pad);
   right: var(--pad);
-  bottom: 7vh;
+  bottom: 14vh;
   z-index: 2;
   pointer-events: none;
 }
@@ -180,10 +279,10 @@ img {
 .hero-brand {
   margin: 0;
   font-family: var(--display);
-  font-size: clamp(3.4rem, 14vw, 11.5rem);
+  font-size: clamp(3.8rem, 16vw, 13rem);
   font-weight: 500;
-  letter-spacing: -0.06em;
-  line-height: 0.82;
+  letter-spacing: -0.065em;
+  line-height: 0.8;
 }
 
 .hero-brand .reg {
@@ -260,6 +359,37 @@ img {
   font-weight: 500;
   letter-spacing: -0.045em;
   line-height: 0.95;
+}
+
+.work-seal {
+  display: grid;
+  grid-template-columns: minmax(10rem, 0.7fr) 1fr;
+  gap: 3rem;
+  align-items: end;
+  min-height: 46vh;
+}
+
+.work-stamp {
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(3.4rem, 10vw, 8.5rem);
+  font-weight: 500;
+  letter-spacing: -0.06em;
+  line-height: 0.82;
+  color: rgba(243, 243, 238, 0.08);
+  text-transform: uppercase;
+}
+
+.work-seal-tag {
+  display: inline-block;
+  margin: 2rem 0 0;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--line);
+  font-family: var(--display);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .work-item {
@@ -373,7 +503,7 @@ img {
 
 .practice-item {
   display: grid;
-  grid-template-columns: 4rem 1fr;
+  grid-template-columns: 4rem minmax(10rem, 0.42fr) 1fr;
   gap: 1rem 2rem;
   padding: 4.5rem 0;
   border-top: 1px solid var(--line);
@@ -393,7 +523,7 @@ img {
 }
 
 .practice-text {
-  margin: 1.1rem 0 0;
+  margin: 0.35rem 0 0;
   max-width: 38rem;
   color: var(--muted);
   font-size: 15px;
@@ -473,6 +603,36 @@ img {
   margin-top: 2.2rem;
 }
 
+.about-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 14rem));
+  gap: 1.4rem 2.4rem;
+  margin: 2.6rem 0 2.2rem;
+}
+
+.about-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--line);
+}
+
+.about-fact span {
+  font-family: var(--display);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.about-fact strong {
+  font-family: var(--display);
+  font-size: 1.15rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
 .about-note {
   margin: 1.4rem 0 0;
   max-width: 36rem;
@@ -518,8 +678,13 @@ html[lang="zh-CN"] {
 html[lang="zh-CN"] .header nav a,
 html[lang="zh-CN"] .section-kicker,
 html[lang="zh-CN"] .hero-meta p,
+html[lang="zh-CN"] .hero-hud,
+html[lang="zh-CN"] .hero-status,
 html[lang="zh-CN"] .scroll-cue,
 html[lang="zh-CN"] .exp-head,
+html[lang="zh-CN"] .work-stamp,
+html[lang="zh-CN"] .work-seal-tag,
+html[lang="zh-CN"] .about-fact span,
 html[lang="zh-CN"] .footer {
   letter-spacing: 0.08em;
   text-transform: none;
@@ -554,8 +719,19 @@ html[lang="zh-CN"] .practice-name {
     letter-spacing: 0.1em;
   }
 
+  .frame,
+  .hero-hud,
+  .hero-status {
+    display: none;
+  }
+
+  .work-seal,
+  .about-facts,
   .practice-item {
     grid-template-columns: 1fr;
+  }
+
+  .practice-item {
     padding: 3rem 0;
   }
 

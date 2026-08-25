@@ -12,10 +12,11 @@ onMounted(() => {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
-  const bars = 56;
+  const bars = 72;
   const energy = new Float32Array(bars);
   let raf = 0;
   let running = false;
+  let sweep = 0;
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const resize = () => {
@@ -31,14 +32,30 @@ onMounted(() => {
     ctx.clearRect(0, 0, width, height);
     const mid = height * 0.5;
     const gap = width / bars;
+    sweep = (sweep + 0.006) % 1;
+
+    ctx.strokeStyle = "rgba(243,243,238,0.08)";
+    ctx.beginPath();
+    ctx.moveTo(0, mid);
+    ctx.lineTo(width, mid);
+    ctx.stroke();
 
     for (let i = 0; i < bars; i += 1) {
-      energy[i] *= 0.94;
-      const h = 4 + energy[i] * (height * 0.42);
+      energy[i] *= 0.93;
+      const wave = Math.sin(i * 0.18 + sweep * Math.PI * 2) * 0.08;
+      const h = 5 + (energy[i] + wave) * (height * 0.4);
       const x = i * gap + gap * 0.35;
-      ctx.fillStyle = energy[i] > 0.12 ? "rgba(78, 140, 255, 0.85)" : "rgba(243,243,238,0.28)";
-      ctx.fillRect(x, mid - h, Math.max(1, gap * 0.22), h * 2);
+      ctx.fillStyle = energy[i] > 0.1 ? "rgba(78,140,255,0.88)" : "rgba(243,243,238,0.24)";
+      ctx.fillRect(x, mid - h, Math.max(1, gap * 0.28), h * 2);
     }
+
+    const sx = sweep * width;
+    ctx.strokeStyle = "rgba(78,140,255,0.45)";
+    ctx.beginPath();
+    ctx.moveTo(sx, 8);
+    ctx.lineTo(sx, height - 8);
+    ctx.stroke();
+
     if (running && !reduced) raf = requestAnimationFrame(draw);
   };
 
@@ -47,8 +64,8 @@ onMounted(() => {
     const t = (event.clientX - rect.left) / rect.width;
     const index = Math.max(0, Math.min(bars - 1, Math.floor(t * bars)));
     energy[index] = 1;
-    if (index > 0) energy[index - 1] = Math.max(energy[index - 1], 0.55);
-    if (index < bars - 1) energy[index + 1] = Math.max(energy[index + 1], 0.55);
+    if (index > 0) energy[index - 1] = Math.max(energy[index - 1], 0.62);
+    if (index < bars - 1) energy[index + 1] = Math.max(energy[index + 1], 0.62);
   };
 
   const start = () => {
@@ -63,7 +80,7 @@ onMounted(() => {
 
   resize();
   window.addEventListener("resize", resize);
-  canvas.addEventListener("pointermove", onMove, { passive: true });
+  window.addEventListener("pointermove", onMove, { passive: true });
   const io = new IntersectionObserver(([entry]) => {
     if (entry.isIntersecting) start();
     else stop();
@@ -75,7 +92,7 @@ onMounted(() => {
     stop();
     io.disconnect();
     window.removeEventListener("resize", resize);
-    canvas.removeEventListener("pointermove", onMove);
+    window.removeEventListener("pointermove", onMove);
   };
 });
 

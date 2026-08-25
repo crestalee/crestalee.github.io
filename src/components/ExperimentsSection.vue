@@ -19,13 +19,21 @@
         <p class="exp-note">{{ t.experiments.items[1].note }}</p>
         <SignalSketch />
       </div>
-      <div class="exp-panel exp-panel-wide" data-reveal>
+      <div class="exp-panel" data-reveal>
         <div class="exp-head">
           <span class="exp-index">{{ t.experiments.items[2].index }}</span>
           <p class="exp-title">{{ t.experiments.items[2].name }}</p>
         </div>
         <p class="exp-note">{{ t.experiments.items[2].note }}</p>
         <OrbitSketch />
+      </div>
+      <div class="exp-panel" data-reveal>
+        <div class="exp-head">
+          <span class="exp-index">{{ t.experiments.items[3].index }}</span>
+          <p class="exp-title">{{ t.experiments.items[3].name }}</p>
+        </div>
+        <p class="exp-note">{{ t.experiments.items[3].note }}</p>
+        <TraceSketch />
       </div>
     </div>
   </section>
@@ -35,6 +43,7 @@
 import FieldSketch from "./FieldSketch.vue";
 import SignalSketch from "./SignalSketch.vue";
 import OrbitSketch from "./OrbitSketch.vue";
+import TraceSketch from "./TraceSketch.vue";
 import { useLocale } from "../composables/useLocale.js";
 
 const { t } = useLocale();

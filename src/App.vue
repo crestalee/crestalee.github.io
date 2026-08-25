@@ -1,12 +1,13 @@
 <template>
   <div class="site">
     <SpaceCanvas />
+    <SiteFrame />
     <SiteHeader />
     <main>
       <HeroSection />
-      <WorkSection />
-      <PracticeSection />
       <ExperimentsSection />
+      <PracticeSection />
+      <WorkSection />
       <TechnologySection />
       <AboutSection />
       <ContactSection />
@@ -18,6 +19,7 @@
 <script setup>
 import { onMounted, onUnmounted } from "vue";
 import SpaceCanvas from "./components/SpaceCanvas.vue";
+import SiteFrame from "./components/SiteFrame.vue";
 import SiteHeader from "./components/SiteHeader.vue";
 import HeroSection from "./components/HeroSection.vue";
 import WorkSection from "./components/WorkSection.vue";

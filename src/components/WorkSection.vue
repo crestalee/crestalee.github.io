@@ -1,9 +1,13 @@
 <template>
   <section id="work" class="section">
     <p class="section-kicker" data-reveal>{{ t.work.kicker }}</p>
-    <article v-if="!projects.length" data-reveal>
-      <p class="work-empty">{{ t.work.empty }}</p>
-      <p class="about-note">{{ t.work.emptyNote }}</p>
+    <article v-if="!projects.length" class="work-seal" data-reveal>
+      <p class="work-stamp">{{ t.work.stamp }}</p>
+      <div>
+        <p class="work-empty">{{ t.work.empty }}</p>
+        <p class="about-note">{{ t.work.emptyNote }}</p>
+        <p class="work-seal-tag">{{ t.work.seal }}</p>
+      </div>
     </article>
     <article v-for="item in projects" :key="item.id" class="work-item" data-reveal>
       <span class="work-index">{{ item.index }}</span>
