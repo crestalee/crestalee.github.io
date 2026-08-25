@@ -2,39 +2,98 @@ import * as THREE from "three";
 
 const BG = 0x010104;
 
-function makeMoonTexture(size = 768) {
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = size;
-  const ctx = canvas.getContext("2d");
-  ctx.fillStyle = "#8a8d96";
-  ctx.fillRect(0, 0, size, size);
+// Craters are drawn as real height (rim raised, floor sunken) on a bump map so
+// the scene's own lighting carves out the highlight/shadow — not a baked-in blob.
+function makeMoonMaps(size = 1024) {
+  const craters = [];
+  const craterCount = 46;
+  for (let i = 0; i < craterCount; i += 1) {
+    craters.push({
+      x: Math.random() * size,
+      y: Math.random() * size,
+      r: 10 + Math.random() ** 2.2 * 92,
+    });
+  }
 
-  for (let i = 0; i < 90; i += 1) {
+  const albedo = document.createElement("canvas");
+  albedo.width = albedo.height = size;
+  const actx = albedo.getContext("2d");
+  actx.fillStyle = "#9b9c9f";
+  actx.fillRect(0, 0, size, size);
+
+  // Maria — large soft darker plains, colour only, no height.
+  for (let i = 0; i < 5; i += 1) {
     const x = Math.random() * size;
     const y = Math.random() * size;
-    const r = 6 + Math.random() * 48;
-    const glow = ctx.createRadialGradient(x - r * 0.25, y - r * 0.25, 0, x, y, r);
-    glow.addColorStop(0, "rgba(168, 172, 186, 0.5)");
-    glow.addColorStop(0.45, "rgba(52, 56, 68, 0.45)");
-    glow.addColorStop(1, "rgba(0, 0, 0, 0)");
-    ctx.fillStyle = glow;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
+    const r = size * (0.16 + Math.random() * 0.14);
+    const g = actx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, "rgba(58, 60, 66, 0.4)");
+    g.addColorStop(1, "rgba(58, 60, 66, 0)");
+    actx.fillStyle = g;
+    actx.beginPath();
+    actx.arc(x, y, r, 0, Math.PI * 2);
+    actx.fill();
   }
+  // Barely-there AO so craters still read faintly in flat light — the bump
+  // map (lit by the scene's key light) does the real shading work.
+  craters.forEach(({ x, y, r }) => {
+    const g = actx.createRadialGradient(x, y, 0, x, y, r * 0.7);
+    g.addColorStop(0, "rgba(20, 20, 24, 0.14)");
+    g.addColorStop(1, "rgba(20, 20, 24, 0)");
+    actx.fillStyle = g;
+    actx.beginPath();
+    actx.arc(x, y, r * 0.7, 0, Math.PI * 2);
+    actx.fill();
+  });
+  const albedoImage = actx.getImageData(0, 0, size, size);
+  for (let i = 0; i < albedoImage.data.length; i += 4) {
+    const n = (Math.random() - 0.5) * 16;
+    albedoImage.data[i] += n;
+    albedoImage.data[i + 1] += n * 0.97;
+    albedoImage.data[i + 2] += n * 1.04;
+  }
+  actx.putImageData(albedoImage, 0, 0);
 
-  const image = ctx.getImageData(0, 0, size, size);
-  for (let i = 0; i < image.data.length; i += 4) {
-    const n = (Math.random() - 0.5) * 22;
-    image.data[i] += n;
-    image.data[i + 1] += n * 0.95;
-    image.data[i + 2] += n * 1.05;
+  const bump = document.createElement("canvas");
+  bump.width = bump.height = size;
+  const bctx = bump.getContext("2d");
+  bctx.fillStyle = "#808080";
+  bctx.fillRect(0, 0, size, size);
+  craters.forEach(({ x, y, r }) => {
+    // Sunken floor.
+    const floor = bctx.createRadialGradient(x, y, 0, x, y, r * 0.72);
+    floor.addColorStop(0, "rgba(0, 0, 0, 0.95)");
+    floor.addColorStop(1, "rgba(0, 0, 0, 0)");
+    bctx.fillStyle = floor;
+    bctx.beginPath();
+    bctx.arc(x, y, r * 0.72, 0, Math.PI * 2);
+    bctx.fill();
+    // Raised rim ring — this is what catches the key light as a bright edge.
+    const rim = bctx.createRadialGradient(x, y, r * 0.55, x, y, r * 1.05);
+    rim.addColorStop(0, "rgba(255, 255, 255, 0)");
+    rim.addColorStop(0.7, "rgba(255, 255, 255, 0.8)");
+    rim.addColorStop(1, "rgba(128, 128, 128, 0)");
+    bctx.fillStyle = rim;
+    bctx.beginPath();
+    bctx.arc(x, y, r * 1.05, 0, Math.PI * 2);
+    bctx.fill();
+  });
+  // Fine regolith grain so the surface isn't perfectly smooth between craters.
+  const bumpImage = bctx.getImageData(0, 0, size, size);
+  for (let i = 0; i < bumpImage.data.length; i += 4) {
+    const n = (Math.random() - 0.5) * 20;
+    bumpImage.data[i] += n;
+    bumpImage.data[i + 1] += n;
+    bumpImage.data[i + 2] += n;
   }
-  ctx.putImageData(image, 0, 0);
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.anisotropy = 4;
-  return texture;
+  bctx.putImageData(bumpImage, 0, 0);
+
+  const map = new THREE.CanvasTexture(albedo);
+  map.colorSpace = THREE.SRGBColorSpace;
+  map.anisotropy = 4;
+  const bumpMap = new THREE.CanvasTexture(bump);
+  bumpMap.anisotropy = 4;
+  return { map, bumpMap };
 }
 
 function makeStars(count, radiusMin, radiusMax, band = false) {
@@ -91,11 +150,13 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
   const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 120);
   camera.position.set(0, 0.15, 8.4);
 
-  const sun = new THREE.DirectionalLight(0xf4f6ff, 4.6);
-  sun.position.set(-2.4, 1.4, 6.4);
-  const fill = new THREE.HemisphereLight(0x1b2744, 0x050508, 0.55);
-  const rim = new THREE.DirectionalLight(0xc8cdd8, 0.28);
-  rim.position.set(4.5, -0.6, -3.2);
+  // Key light sits well to the side so a real day/night line crosses the moon
+  // instead of washing the whole disc in even light.
+  const sun = new THREE.DirectionalLight(0xf4f6ff, 3.6);
+  sun.position.set(-5.6, 2, 3.2);
+  const fill = new THREE.HemisphereLight(0x141c30, 0x030304, 0.16);
+  const rim = new THREE.DirectionalLight(0x8d95ac, 0.4);
+  rim.position.set(4.8, -0.8, -4.5);
   scene.add(sun, fill, rim);
 
   const stars = new THREE.Points(
@@ -113,14 +174,16 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
   milky.rotation.z = 0.55;
   scene.add(stars, bright, milky);
 
-  const moonMap = makeMoonTexture(mobile ? 512 : 768);
+  const { map: moonMap, bumpMap: moonBump } = makeMoonMaps(mobile ? 640 : 1024);
   const moon = new THREE.Mesh(
-    new THREE.SphereGeometry(1.28, mobile ? 48 : 80, mobile ? 48 : 80),
+    new THREE.SphereGeometry(1.28, mobile ? 64 : 96, mobile ? 64 : 96),
     new THREE.MeshStandardMaterial({
       map: moonMap,
-      color: 0xf0f2f6,
-      roughness: 0.86,
-      metalness: 0.02,
+      bumpMap: moonBump,
+      bumpScale: 0.32,
+      color: 0xe7e9ee,
+      roughness: 0.92,
+      metalness: 0.0,
     }),
   );
   moon.position.set(mobile ? 0 : 1.15, 0.18, 0);
@@ -262,6 +325,7 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
       observer.disconnect();
       window.removeEventListener("pointermove", onPointer);
       moonMap.dispose();
+      moonBump.dispose();
       scene.traverse((object) => {
         if (object.geometry) object.geometry.dispose();
         if (object.material) {
