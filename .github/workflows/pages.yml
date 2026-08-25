@@ -22,7 +22,6 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - run: cp .env.example .env
       - run: npm install
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
