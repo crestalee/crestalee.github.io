@@ -1,8 +1,10 @@
-# crestalee
+# CRESTALEE®
 
-个人主页：https://crestalee.github.io
+个人主页：[crestalee.github.io](https://crestalee.github.io)
 
-基于开源模板 [imsyy/home](https://github.com/imsyy/home)（MIT）。
+软件工程师。Java / Vue / AI。
+
+站点是自己写的：Vue 3、Vite、Three.js。中英切换。GitHub Pages 部署。
 
 ```bash
 npm install
