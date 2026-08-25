@@ -1,7 +1,6 @@
 <template>
   <div class="site">
     <SpaceCanvas />
-    <div class="grain" aria-hidden="true" />
     <SiteHeader />
     <main>
       <HeroSection />
