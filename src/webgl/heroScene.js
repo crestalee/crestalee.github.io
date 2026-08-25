@@ -1,17 +1,108 @@
 import * as THREE from "three";
-import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
-import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
-import { RGBShiftShader } from "three/addons/shaders/RGBShiftShader.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 
-const BG = 0x050505;
+const BG = 0x010104;
+
+function makeMoonTexture(size = 768) {
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#3b3f4c";
+  ctx.fillRect(0, 0, size, size);
+
+  for (let i = 0; i < 90; i += 1) {
+    const x = Math.random() * size;
+    const y = Math.random() * size;
+    const r = 6 + Math.random() * 48;
+    const glow = ctx.createRadialGradient(x - r * 0.25, y - r * 0.25, 0, x, y, r);
+    glow.addColorStop(0, "rgba(168, 172, 186, 0.5)");
+    glow.addColorStop(0.45, "rgba(52, 56, 68, 0.45)");
+    glow.addColorStop(1, "rgba(0, 0, 0, 0)");
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  const image = ctx.getImageData(0, 0, size, size);
+  for (let i = 0; i < image.data.length; i += 4) {
+    const n = (Math.random() - 0.5) * 22;
+    image.data[i] += n;
+    image.data[i + 1] += n * 0.95;
+    image.data[i + 2] += n * 1.05;
+  }
+  ctx.putImageData(image, 0, 0);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 4;
+  return texture;
+}
+
+function makeStars(count, radiusMin, radiusMax, band = false) {
+  const positions = new Float32Array(count * 3);
+  const sizes = new Float32Array(count);
+  const phases = new Float32Array(count);
+  for (let i = 0; i < count; i += 1) {
+    const theta = Math.random() * Math.PI * 2;
+    const phi = band
+      ? Math.PI / 2 + (Math.random() - 0.5) * 0.42
+      : Math.acos(2 * Math.random() - 1);
+    const radius = radiusMin + Math.random() * (radiusMax - radiusMin);
+    positions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
+    positions[i * 3 + 1] = radius * Math.cos(phi);
+    positions[i * 3 + 2] = radius * Math.sin(phi) * Math.sin(theta);
+    sizes[i] = Math.random() > 0.984 ? 2.6 : 0.65 + Math.random() * 1.15;
+    phases[i] = Math.random() * Math.PI * 2;
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute("aSize", new THREE.BufferAttribute(sizes, 1));
+  geometry.setAttribute("aPhase", new THREE.BufferAttribute(phases, 1));
+  return geometry;
+}
+
+function starMaterial() {
+  return new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    uniforms: {
+      uTime: { value: 0 },
+      uPixel: { value: 1 },
+    },
+    vertexShader: `
+      attribute float aSize;
+      attribute float aPhase;
+      uniform float uTime;
+      uniform float uPixel;
+      varying float vAlpha;
+      void main() {
+        float twinkle = 0.55 + 0.45 * sin(uTime * 1.6 + aPhase);
+        vAlpha = twinkle;
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = aSize * uPixel * (210.0 / max(1.0, -mv.z)) * twinkle;
+        gl_Position = projectionMatrix * mv;
+      }
+    `,
+    fragmentShader: `
+      varying float vAlpha;
+      void main() {
+        vec2 point = gl_PointCoord * 2.0 - 1.0;
+        float dist = dot(point, point);
+        if (dist > 1.0) discard;
+        float core = smoothstep(1.0, 0.0, dist);
+        gl_FragColor = vec4(0.9, 0.93, 1.0, core * vAlpha);
+      }
+    `,
+  });
+}
 
 export function createHeroScene(canvas, { reducedMotion = false } = {}) {
   const mobile = window.matchMedia("(max-width: 720px)").matches;
-  const dpr = Math.min(window.devicePixelRatio || 1, mobile ? 1.2 : 1.7);
+  const dpr = Math.min(window.devicePixelRatio || 1, mobile ? 1.15 : 1.6);
 
   const renderer = new THREE.WebGLRenderer({
     canvas,
@@ -22,152 +113,130 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
   renderer.setPixelRatio(dpr);
   renderer.setClearColor(BG, 1);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.02;
+  renderer.toneMappingExposure = 1.05;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(BG, 7, 15);
+  const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 120);
+  camera.position.set(0, 0.15, 8.4);
 
-  const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 40);
-  camera.position.set(0, 0.12, 7.1);
+  const sun = new THREE.DirectionalLight(0xf4f6ff, 4.6);
+  sun.position.set(-2.4, 1.4, 6.4);
+  const fill = new THREE.HemisphereLight(0x1b2744, 0x050508, 0.55);
+  const rim = new THREE.DirectionalLight(0x4e8cff, 0.7);
+  rim.position.set(4.5, -0.6, -3.2);
+  scene.add(sun, fill, rim);
 
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  let env = null;
-  try {
-    env = pmrem.fromScene(new RoomEnvironment(), 0.06).texture;
-    scene.environment = env;
-  } catch {
-    scene.environment = null;
-  }
-
-  const key = new THREE.DirectionalLight(0xdce6ff, 3.4);
-  key.position.set(3.6, 2.8, 3.2);
-  const accent = new THREE.DirectionalLight(0x4e8cff, 2.8);
-  accent.position.set(-2.8, 1.4, 2.2);
-  const rim = new THREE.DirectionalLight(0xf3f3ee, 1.15);
-  rim.position.set(-3.2, -1.4, -3.4);
-  const fill = new THREE.AmbientLight(0x2a2d36, 0.7);
-  const coreLight = new THREE.PointLight(0x4e8cff, 8, 6, 2);
-  coreLight.position.set(0, 0, 0);
-  scene.add(key, accent, rim, fill, coreLight);
-
-  const group = new THREE.Group();
-  scene.add(group);
-
-  const core = new THREE.Mesh(
-    new THREE.IcosahedronGeometry(1.28, 0),
-    new THREE.MeshPhysicalMaterial({
-      color: 0x2a303a,
-      metalness: 0.97,
-      roughness: 0.18,
-      envMapIntensity: 1.8,
-      clearcoat: 1,
-      clearcoatRoughness: 0.08,
-    }),
+  const stars = new THREE.Points(
+    makeStars(mobile ? 1600 : 4200, 18, 46),
+    starMaterial(),
   );
-  group.add(core);
-
-  const glass = new THREE.Mesh(
-    new THREE.IcosahedronGeometry(1.34, 0),
-    new THREE.MeshPhysicalMaterial({
-      color: 0x9bb4d8,
-      metalness: 0.1,
-      roughness: 0.04,
-      transmission: 0.72,
-      thickness: 0.55,
-      ior: 1.45,
-      transparent: true,
-      opacity: 0.22,
-      envMapIntensity: 2,
-    }),
+  const milky = new THREE.Points(
+    makeStars(mobile ? 700 : 1800, 22, 38, true),
+    starMaterial(),
   );
-  group.add(glass);
+  milky.rotation.z = 0.55;
+  scene.add(stars, milky);
 
-  const shell = new THREE.Mesh(
-    new THREE.IcosahedronGeometry(1.38, 0),
-    new THREE.MeshBasicMaterial({
-      color: 0xc5d2ea,
-      wireframe: true,
-      transparent: true,
-      opacity: 0.28,
-    }),
-  );
-  group.add(shell);
-
-  const ember = new THREE.Mesh(
-    new THREE.OctahedronGeometry(0.42, 0),
+  const moonMap = makeMoonTexture(mobile ? 512 : 768);
+  const moon = new THREE.Mesh(
+    new THREE.SphereGeometry(1.28, mobile ? 48 : 80, mobile ? 48 : 80),
     new THREE.MeshStandardMaterial({
-      color: 0x07101d,
-      emissive: 0x4e8cff,
-      emissiveIntensity: 3.2,
-      roughness: 0.28,
-      metalness: 0.1,
+      map: moonMap,
+      color: 0xf0f2f6,
+      roughness: 0.86,
+      metalness: 0.02,
     }),
   );
-  group.add(ember);
+  moon.position.set(mobile ? 0 : 1.15, 0.18, 0);
 
-  const ringMat = new THREE.MeshPhysicalMaterial({
-    color: 0xd5dbe6,
-    metalness: 1,
-    roughness: 0.12,
-    envMapIntensity: 1.4,
-  });
-  const rings = [0, 1, 2].map((i) => {
-    const mesh = new THREE.Mesh(new THREE.TorusGeometry(1.78 + i * 0.24, 0.018, 16, 128), ringMat);
-    mesh.rotation.set(0.2 + i * 0.55, i * 0.8, i * 0.35);
-    group.add(mesh);
-    return mesh;
-  });
-
-  const shardGeo = new THREE.TetrahedronGeometry(0.07);
-  const shardMat = new THREE.MeshPhysicalMaterial({
-    color: 0x1a1e28,
-    metalness: 0.96,
-    roughness: 0.18,
-  });
-  const shardCount = mobile || reducedMotion ? 5 : 9;
-  const shards = Array.from({ length: shardCount }, (_, i) => {
-    const mesh = new THREE.Mesh(shardGeo, shardMat);
-    mesh.userData = {
-      a: (i / shardCount) * Math.PI * 2,
-      r: 2.02 + (i % 3) * 0.14,
-      s: 0.35 + i * 0.06,
-    };
-    group.add(mesh);
-    return mesh;
-  });
-
-  const pCount = mobile || reducedMotion ? 36 : 96;
-  const pPos = new Float32Array(pCount * 3);
-  for (let i = 0; i < pCount; i += 1) {
-    const r = 1.7 + Math.random() * 2.1;
-    const t = Math.random() * Math.PI * 2;
-    const p = (Math.random() - 0.5) * Math.PI;
-    pPos[i * 3] = Math.cos(t) * Math.cos(p) * r;
-    pPos[i * 3 + 1] = Math.sin(p) * r * 0.62;
-    pPos[i * 3 + 2] = Math.sin(t) * Math.cos(p) * r;
-  }
-  const dust = new THREE.Points(
-    new THREE.BufferGeometry().setAttribute("position", new THREE.BufferAttribute(pPos, 3)),
-    new THREE.PointsMaterial({
-      color: 0xc6cad3,
-      size: 0.016,
+  const atmosphere = new THREE.Mesh(
+    new THREE.SphereGeometry(1.38, 48, 48),
+    new THREE.ShaderMaterial({
+      side: THREE.BackSide,
       transparent: true,
-      opacity: 0.42,
+      depthWrite: false,
+      uniforms: {
+        uColor: { value: new THREE.Color(0x6f9dff) },
+      },
+      vertexShader: `
+        varying vec3 vNormal;
+        void main() {
+          vNormal = normalize(normalMatrix * normal);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vNormal;
+        uniform vec3 uColor;
+        void main() {
+          float fresnel = pow(0.72 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.4);
+          gl_FragColor = vec4(uColor, clamp(fresnel * 0.55, 0.0, 0.55));
+        }
+      `,
+    }),
+  );
+  atmosphere.position.copy(moon.position);
+
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(1.86, 0.012, 8, 140),
+    new THREE.MeshStandardMaterial({
+      color: 0xb7c4de,
+      roughness: 0.35,
+      metalness: 0.55,
+      transparent: true,
+      opacity: 0.55,
+    }),
+  );
+  ring.rotation.x = Math.PI / 2.35;
+  ring.rotation.y = 0.35;
+  ring.position.copy(moon.position);
+
+  const ringDust = new THREE.Points(
+    makeStars(mobile ? 180 : 420, 1.7, 2.05, true),
+    new THREE.PointsMaterial({
+      color: 0x9eb0d4,
+      size: 0.012,
+      transparent: true,
+      opacity: 0.45,
       depthWrite: false,
     }),
   );
-  group.add(dust);
+  ringDust.position.copy(moon.position);
+  ringDust.rotation.copy(ring.rotation);
+
+  const world = new THREE.Group();
+  world.add(moon, atmosphere, ring, ringDust);
+  scene.add(world);
+
+  const meteorCount = 16;
+  const meteorPos = new Float32Array(meteorCount * 3);
+  const meteorGeo = new THREE.BufferGeometry();
+  meteorGeo.setAttribute("position", new THREE.BufferAttribute(meteorPos, 3));
+  const meteor = new THREE.Points(
+    meteorGeo,
+    new THREE.PointsMaterial({
+      color: 0xd7e6ff,
+      size: 0.05,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+    }),
+  );
+  scene.add(meteor);
+  const meteorState = {
+    wait: 3,
+    life: 0,
+    origin: new THREE.Vector3(8, 4, -6),
+    dir: new THREE.Vector3(-1, -0.35, 0.2),
+  };
 
   let composer = null;
   if (!mobile && !reducedMotion) {
     try {
       composer = new EffectComposer(renderer);
       composer.addPass(new RenderPass(scene, camera));
-      composer.addPass(new UnrealBloomPass(new THREE.Vector2(1, 1), 0.22, 0.62, 0.78));
-      const rgb = new ShaderPass(RGBShiftShader);
-      rgb.uniforms.amount.value = 0.0007;
-      composer.addPass(rgb);
+      composer.addPass(new UnrealBloomPass(new THREE.Vector2(1, 1), 0.28, 0.8, 0.72));
       composer.addPass(new OutputPass());
     } catch {
       composer = null;
@@ -193,40 +262,58 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
     composer?.setSize(width, height);
+    const pixel = Math.min(window.devicePixelRatio || 1, 1.6);
+    stars.material.uniforms.uPixel.value = pixel;
+    milky.material.uniforms.uPixel.value = pixel;
+  };
+
+  const tickMeteor = (delta) => {
+    meteorState.wait -= delta;
+    if (meteorState.wait < 0 && meteorState.life <= 0) {
+      meteorState.life = 1;
+      meteorState.origin.set(6 + Math.random() * 4, 2 + Math.random() * 3, -8);
+      meteorState.dir.set(-1.2, -0.25 - Math.random() * 0.2, 0.15);
+      meteorState.wait = 5 + Math.random() * 8;
+    }
+    if (meteorState.life > 0) {
+      meteorState.life -= delta * 0.85;
+      meteor.material.opacity = Math.max(0, meteorState.life);
+      for (let i = 0; i < meteorCount; i += 1) {
+        const along = i / meteorCount;
+        meteorPos[i * 3] = meteorState.origin.x + meteorState.dir.x * along * 4.5 + (1 - meteorState.life) * meteorState.dir.x * 10;
+        meteorPos[i * 3 + 1] = meteorState.origin.y + meteorState.dir.y * along * 4.5 + (1 - meteorState.life) * meteorState.dir.y * 10;
+        meteorPos[i * 3 + 2] = meteorState.origin.z + meteorState.dir.z * along * 2;
+      }
+      meteorGeo.attributes.position.needsUpdate = true;
+    } else {
+      meteor.material.opacity = 0;
+    }
   };
 
   const tick = () => {
-    const time = clock.getElapsedTime();
-    pointer.x += (target.x - pointer.x) * 0.045;
-    pointer.y += (target.y - pointer.y) * 0.045;
+    const delta = Math.min(clock.getDelta(), 0.05);
+    const time = clock.elapsedTime;
+    pointer.x += (target.x - pointer.x) * 0.04;
+    pointer.y += (target.y - pointer.y) * 0.04;
+
+    stars.material.uniforms.uTime.value = time;
+    milky.material.uniforms.uTime.value = time;
 
     if (!reducedMotion) {
-      group.rotation.y = time * 0.075 + pointer.x * 0.32;
-      group.rotation.x = pointer.y * 0.16 + Math.sin(time * 0.28) * 0.035;
-      group.rotation.z = scroll * 0.35;
-      group.position.y = Math.sin(time * 0.42) * 0.05;
-      ember.rotation.y = -time * 0.32;
-      ember.rotation.x = time * 0.18;
-      shell.rotation.y = time * 0.05;
-      rings.forEach((ring, i) => {
-        ring.rotation.z += 0.0011 * (i + 1);
-        ring.rotation.x += 0.00035;
-      });
-      shards.forEach((shard) => {
-        const angle = shard.userData.a + time * shard.userData.s * 0.14;
-        shard.position.set(
-          Math.cos(angle) * shard.userData.r,
-          Math.sin(angle * 1.35) * 0.32,
-          Math.sin(angle) * shard.userData.r,
-        );
-        shard.lookAt(0, 0, 0);
-      });
-      dust.rotation.y = time * 0.028;
+      stars.rotation.y = time * 0.008;
+      milky.rotation.y = time * 0.01;
+      moon.rotation.y = time * 0.035;
+      ring.rotation.z = time * 0.02;
+      ringDust.rotation.z = time * 0.02;
+      world.position.y = Math.sin(time * 0.22) * 0.06 - scroll * 1.1;
+      world.position.x = (mobile ? 0 : 0.15) + pointer.x * 0.18;
+      tickMeteor(delta);
     }
 
-    camera.position.x = pointer.x * 0.22;
-    camera.position.y = 0.12 + pointer.y * 0.1;
-    camera.lookAt(0, 0, 0);
+    camera.position.x = pointer.x * 0.35;
+    camera.position.y = 0.15 + pointer.y * 0.16;
+    camera.position.z = 8.4 + scroll * 2.2;
+    camera.lookAt(moon.position.x * 0.35, 0.1 - scroll * 0.4, 0);
 
     if (composer) composer.render();
     else renderer.render(scene, camera);
@@ -237,8 +324,7 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
   const observer = new ResizeObserver(resize);
   observer.observe(canvas);
   window.addEventListener("pointermove", onPointer, { passive: true });
-
-  const onVisibility = () => {
+  document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
       running = false;
       cancelAnimationFrame(raf);
@@ -249,8 +335,7 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
       clock.getDelta();
       tick();
     }
-  };
-  document.addEventListener("visibilitychange", onVisibility);
+  });
 
   resize();
   tick();
@@ -276,7 +361,7 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
       cancelAnimationFrame(raf);
       observer.disconnect();
       window.removeEventListener("pointermove", onPointer);
-      document.removeEventListener("visibilitychange", onVisibility);
+      moonMap.dispose();
       scene.traverse((object) => {
         if (object.geometry) object.geometry.dispose();
         if (object.material) {
@@ -284,8 +369,6 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
           materials.forEach((material) => material.dispose());
         }
       });
-      env?.dispose();
-      pmrem.dispose();
       composer?.dispose();
       renderer.dispose();
     },

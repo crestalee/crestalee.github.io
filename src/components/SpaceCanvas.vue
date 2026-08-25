@@ -1,14 +1,16 @@
 <template>
-  <canvas ref="canvasRef" class="hero-canvas" aria-hidden="true" />
+  <div class="space-layer" aria-hidden="true">
+    <div v-if="!ready" class="space-fallback" />
+    <canvas ref="canvasRef" class="space-canvas" />
+  </div>
 </template>
 
 <script setup>
 import { onMounted, onUnmounted, ref } from "vue";
 
-const emit = defineEmits(["ready"]);
 const canvasRef = ref(null);
+const ready = ref(false);
 let scene = null;
-let io = null;
 
 onMounted(async () => {
   const canvas = canvasRef.value;
@@ -18,31 +20,20 @@ onMounted(async () => {
     const { createHeroScene } = await import("../webgl/heroScene.js");
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     scene = createHeroScene(canvas, { reducedMotion: reduced });
-    emit("ready");
-
-    io = new IntersectionObserver(
-      ([entry]) => {
-        if (entry) scene?.setActive(entry.isIntersecting);
-      },
-      { threshold: 0 },
-    );
-    io.observe(canvas.parentElement || canvas);
+    ready.value = true;
 
     const onScroll = () => {
-      const max = window.innerHeight || 1;
+      const max = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
       scene?.setScroll(Math.min(window.scrollY / max, 1));
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     canvas._offScroll = () => window.removeEventListener("scroll", onScroll);
   } catch (error) {
     console.error(error);
-    document.documentElement.dataset.heroError = String(error?.message || error);
-    canvas.style.display = "none";
   }
 });
 
 onUnmounted(() => {
-  io?.disconnect();
   canvasRef.value?._offScroll?.();
   scene?.destroy();
 });

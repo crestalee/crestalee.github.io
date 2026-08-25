@@ -1,7 +1,5 @@
 <template>
   <section id="top" class="hero">
-    <HeroFallback v-if="!canvasReady" />
-    <HeroCanvas @ready="canvasReady = true" />
     <div class="hero-shade" />
     <p class="scroll-cue">{{ t.hero.scroll }}</p>
     <div class="hero-copy" :style="shift">
@@ -19,25 +17,18 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, reactive, ref } from "vue";
-import HeroCanvas from "./HeroCanvas.vue";
-import HeroFallback from "./HeroFallback.vue";
+import { computed, onMounted, onUnmounted, reactive } from "vue";
 import { useLocale } from "../composables/useLocale.js";
 
 const { t } = useLocale();
-
-const canvasReady = ref(false);
-
 const offset = reactive({ x: 0, y: 0 });
 const shift = computed(() => ({
   transform: `translate3d(${offset.x}px, ${offset.y}px, 0)`,
 }));
 
 const onMove = (event) => {
-  const x = (event.clientX / window.innerWidth - 0.5) * 14;
-  const y = (event.clientY / window.innerHeight - 0.5) * 8;
-  offset.x = x;
-  offset.y = y;
+  offset.x = (event.clientX / window.innerWidth - 0.5) * 12;
+  offset.y = (event.clientY / window.innerHeight - 0.5) * 6;
 };
 
 onMounted(() => {

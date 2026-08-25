@@ -1,5 +1,6 @@
 <template>
   <div class="site">
+    <SpaceCanvas />
     <div class="grain" aria-hidden="true" />
     <SiteHeader />
     <main>
@@ -17,6 +18,7 @@
 
 <script setup>
 import { onMounted, onUnmounted } from "vue";
+import SpaceCanvas from "./components/SpaceCanvas.vue";
 import SiteHeader from "./components/SiteHeader.vue";
 import HeroSection from "./components/HeroSection.vue";
 import WorkSection from "./components/WorkSection.vue";

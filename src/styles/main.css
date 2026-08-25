@@ -7,8 +7,8 @@
 @import "lenis/dist/lenis.css";
 
 :root {
-  --bg: #050505;
-  --bg-2: #0a0a0a;
+  --bg: #010104;
+  --bg-2: #07070e;
   --fg: #f3f3ee;
   --muted: #8a8a84;
   --line: rgba(243, 243, 238, 0.12);
@@ -66,12 +66,36 @@ img {
   position: relative;
 }
 
+.space-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.space-canvas,
+.space-fallback {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.space-fallback {
+  background:
+    radial-gradient(1px 1px at 12% 18%, #fff, transparent),
+    radial-gradient(1px 1px at 28% 72%, #dce6ff, transparent),
+    radial-gradient(1px 1px at 61% 31%, #fff, transparent),
+    radial-gradient(1px 1px at 81% 64%, #c5d2ff, transparent),
+    radial-gradient(1.5px 1.5px at 44% 48%, #fff, transparent),
+    #010104;
+}
+
 .grain {
   position: fixed;
   inset: 0;
   z-index: 40;
   pointer-events: none;
-  opacity: 0.04;
+  opacity: 0.03;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
@@ -131,16 +155,9 @@ img {
 
 .hero {
   position: relative;
+  z-index: 1;
   min-height: 100svh;
   overflow: hidden;
-}
-
-.hero-canvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
 }
 
 .hero-shade {
@@ -148,7 +165,7 @@ img {
   inset: 0;
   pointer-events: none;
   background:
-    linear-gradient(180deg, rgba(5, 5, 5, 0.15) 0%, transparent 28%, transparent 58%, rgba(5, 5, 5, 0.82) 100%);
+    linear-gradient(180deg, rgba(1, 1, 4, 0.12) 0%, transparent 30%, transparent 58%, rgba(1, 1, 4, 0.62) 100%);
 }
 
 .hero-copy {
@@ -186,9 +203,8 @@ img {
 .hero-meta p {
   margin: 0;
   font-family: var(--display);
-  font-size: 12px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-size: 13px;
+  letter-spacing: 0.08em;
 }
 
 .hero-meta .manifesto {
@@ -212,8 +228,18 @@ img {
 
 .section {
   position: relative;
+  z-index: 1;
   padding: 22vh var(--pad) 16vh;
   border-top: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(1, 1, 4, 0.22), rgba(1, 1, 4, 0.78));
+}
+
+.section-intro {
+  max-width: 36rem;
+  margin: -0.8rem 0 3.2rem;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.75;
 }
 
 .section-kicker {
@@ -304,6 +330,12 @@ img {
 .experiments {
   display: grid;
   grid-template-columns: 1fr 1fr;
+}
+
+.exp-panel-wide {
+  grid-column: 1 / -1;
+  padding-left: 0;
+  border-left: 0;
 }
 
 .exp-panel {
@@ -454,12 +486,15 @@ img {
 }
 
 .footer {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 1.5rem;
   padding: 4rem var(--pad) 2.4rem;
   border-top: 1px solid var(--line);
+  background: rgba(1, 1, 4, 0.82);
   font-family: var(--display);
   font-size: 12px;
   letter-spacing: 0.16em;
