@@ -19,8 +19,10 @@ onMounted(async () => {
   try {
     const { createHeroScene } = await import("../webgl/heroScene.js");
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    scene = createHeroScene(canvas, { reducedMotion: reduced });
+    scene = await createHeroScene(canvas, { reducedMotion: reduced });
     ready.value = true;
+    window.dispatchEvent(new CustomEvent("crestalee-scene-ready"));
+    scene.playIntro?.();
 
     const onScroll = () => {
       const max = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);

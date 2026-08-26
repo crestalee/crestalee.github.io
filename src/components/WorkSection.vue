@@ -5,24 +5,47 @@
       <p class="work-stamp">{{ t.work.stamp }}</p>
       <div>
         <p class="work-empty">{{ t.work.empty }}</p>
-        <p class="about-note">{{ t.work.emptyNote }}</p>
         <p class="work-seal-tag">{{ t.work.seal }}</p>
       </div>
     </article>
-    <article v-for="item in projects" :key="item.id" class="work-item" data-reveal>
-      <span class="work-index">{{ item.index }}</span>
-      <div>
-        <h2 class="work-name">{{ item.name }}</h2>
-        <p class="work-lines">
-          <template v-for="(line, i) in item.lines" :key="i">
-            {{ line }}<br v-if="i < item.lines.length - 1" />
-          </template>
-        </p>
+    <article
+      v-for="(item, index) in projects"
+      :key="item.id"
+      class="work-showcase"
+      :class="{ 'is-flip': index % 2 === 1 }"
+      data-reveal
+    >
+      <div class="work-preview">
+        <div class="work-preview-glow" />
+        <a
+          v-if="item.href"
+          class="work-preview-frame"
+          :href="item.href"
+          target="_blank"
+          rel="noreferrer"
+          :aria-label="item.previewAlt[locale]"
+        >
+          <img :src="item.preview" :alt="item.previewAlt[locale]" />
+        </a>
+        <div v-else class="work-preview-frame">
+          <img :src="item.preview" :alt="item.previewAlt[locale]" />
+        </div>
+      </div>
+      <div class="work-copy">
+        <span class="work-index">{{ item.index }}</span>
+        <h2 class="work-name">{{ item.name[locale] }}</h2>
         <div class="work-foot">
           <p class="work-stack">{{ item.stack.join("  /  ") }}</p>
-          <a v-if="item.href" class="work-link" :href="item.href" target="_blank" rel="noreferrer">
+          <a
+            v-if="item.href"
+            class="work-link"
+            :href="item.href"
+            target="_blank"
+            rel="noreferrer"
+          >
             {{ t.work.view }}
           </a>
+          <span v-else class="work-seal-tag">{{ t.work.private }}</span>
         </div>
       </div>
     </article>
@@ -33,5 +56,5 @@
 import { projects } from "../data/projects.js";
 import { useLocale } from "../composables/useLocale.js";
 
-const { t } = useLocale();
+const { locale, t } = useLocale();
 </script>

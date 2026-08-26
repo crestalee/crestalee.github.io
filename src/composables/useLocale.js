@@ -11,9 +11,7 @@ function apply(next) {
   if (description) {
     description.setAttribute(
       "content",
-      next === "zh"
-        ? "CRESTALEE。软件工程师。Java / Vue / AI。"
-        : "CRESTALEE. Software Engineer. Java / Vue / AI.",
+      "CRESTALEE",
     );
   }
 }

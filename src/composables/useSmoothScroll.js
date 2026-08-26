@@ -19,6 +19,11 @@ export function startSmoothScroll() {
     syncTouch: false,
   });
 
+  if (document.documentElement.classList.contains("is-intro")) {
+    lenis.stop();
+    window.addEventListener("crestalee-intro-end", () => lenis.start(), { once: true });
+  }
+
   lenis.on("scroll", ScrollTrigger.update);
   const ticker = (time) => {
     lenis.raf(time * 1000);

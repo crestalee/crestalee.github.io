@@ -1,99 +1,31 @@
 import * as THREE from "three";
+import gsap from "gsap";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 
 const BG = 0x010104;
+const MOON_YAW = -Math.PI / 2;
 
-// Craters are drawn as real height (rim raised, floor sunken) on a bump map so
-// the scene's own lighting carves out the highlight/shadow — not a baked-in blob.
-function makeMoonMaps(size = 1024) {
-  const craters = [];
-  const craterCount = 46;
-  for (let i = 0; i < craterCount; i += 1) {
-    craters.push({
-      x: Math.random() * size,
-      y: Math.random() * size,
-      r: 10 + Math.random() ** 2.2 * 92,
-    });
-  }
+function prepTexture(texture, srgb = false) {
+  texture.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+  texture.anisotropy = 8;
+  texture.wrapS = THREE.ClampToEdgeWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  return texture;
+}
 
-  const albedo = document.createElement("canvas");
-  albedo.width = albedo.height = size;
-  const actx = albedo.getContext("2d");
-  actx.fillStyle = "#9b9c9f";
-  actx.fillRect(0, 0, size, size);
-
-  // Maria — large soft darker plains, colour only, no height.
-  for (let i = 0; i < 5; i += 1) {
-    const x = Math.random() * size;
-    const y = Math.random() * size;
-    const r = size * (0.16 + Math.random() * 0.14);
-    const g = actx.createRadialGradient(x, y, 0, x, y, r);
-    g.addColorStop(0, "rgba(58, 60, 66, 0.4)");
-    g.addColorStop(1, "rgba(58, 60, 66, 0)");
-    actx.fillStyle = g;
-    actx.beginPath();
-    actx.arc(x, y, r, 0, Math.PI * 2);
-    actx.fill();
-  }
-  // Barely-there AO so craters still read faintly in flat light — the bump
-  // map (lit by the scene's key light) does the real shading work.
-  craters.forEach(({ x, y, r }) => {
-    const g = actx.createRadialGradient(x, y, 0, x, y, r * 0.7);
-    g.addColorStop(0, "rgba(20, 20, 24, 0.14)");
-    g.addColorStop(1, "rgba(20, 20, 24, 0)");
-    actx.fillStyle = g;
-    actx.beginPath();
-    actx.arc(x, y, r * 0.7, 0, Math.PI * 2);
-    actx.fill();
-  });
-  const albedoImage = actx.getImageData(0, 0, size, size);
-  for (let i = 0; i < albedoImage.data.length; i += 4) {
-    const n = (Math.random() - 0.5) * 16;
-    albedoImage.data[i] += n;
-    albedoImage.data[i + 1] += n * 0.97;
-    albedoImage.data[i + 2] += n * 1.04;
-  }
-  actx.putImageData(albedoImage, 0, 0);
-
-  const bump = document.createElement("canvas");
-  bump.width = bump.height = size;
-  const bctx = bump.getContext("2d");
-  bctx.fillStyle = "#808080";
-  bctx.fillRect(0, 0, size, size);
-  craters.forEach(({ x, y, r }) => {
-    // Sunken floor.
-    const floor = bctx.createRadialGradient(x, y, 0, x, y, r * 0.72);
-    floor.addColorStop(0, "rgba(0, 0, 0, 0.95)");
-    floor.addColorStop(1, "rgba(0, 0, 0, 0)");
-    bctx.fillStyle = floor;
-    bctx.beginPath();
-    bctx.arc(x, y, r * 0.72, 0, Math.PI * 2);
-    bctx.fill();
-    // Raised rim ring — this is what catches the key light as a bright edge.
-    const rim = bctx.createRadialGradient(x, y, r * 0.55, x, y, r * 1.05);
-    rim.addColorStop(0, "rgba(255, 255, 255, 0)");
-    rim.addColorStop(0.7, "rgba(255, 255, 255, 0.8)");
-    rim.addColorStop(1, "rgba(128, 128, 128, 0)");
-    bctx.fillStyle = rim;
-    bctx.beginPath();
-    bctx.arc(x, y, r * 1.05, 0, Math.PI * 2);
-    bctx.fill();
-  });
-  // Fine regolith grain so the surface isn't perfectly smooth between craters.
-  const bumpImage = bctx.getImageData(0, 0, size, size);
-  for (let i = 0; i < bumpImage.data.length; i += 4) {
-    const n = (Math.random() - 0.5) * 20;
-    bumpImage.data[i] += n;
-    bumpImage.data[i + 1] += n;
-    bumpImage.data[i + 2] += n;
-  }
-  bctx.putImageData(bumpImage, 0, 0);
-
-  const map = new THREE.CanvasTexture(albedo);
-  map.colorSpace = THREE.SRGBColorSpace;
-  map.anisotropy = 4;
-  const bumpMap = new THREE.CanvasTexture(bump);
-  bumpMap.anisotropy = 4;
-  return { map, bumpMap };
+async function loadMoonMaps() {
+  const loader = new THREE.TextureLoader();
+  const base = import.meta.env.BASE_URL;
+  const [map, bumpMap] = await Promise.all([
+    loader.loadAsync(`${base}space/moon-color.jpg`),
+    loader.loadAsync(`${base}space/moon-height.jpg`),
+  ]);
+  return {
+    map: prepTexture(map, true),
+    bumpMap: prepTexture(bumpMap),
+  };
 }
 
 function makeStars(count, radiusMin, radiusMax, band = false) {
@@ -119,10 +51,10 @@ function makeStars(count, radiusMin, radiusMax, band = false) {
   return geometry;
 }
 
-function starMaterial(size) {
+function starMaterial(size, attenuation = false) {
   return new THREE.PointsMaterial({
     size,
-    sizeAttenuation: false,
+    sizeAttenuation: attenuation,
     vertexColors: true,
     transparent: true,
     opacity: 0.95,
@@ -130,9 +62,10 @@ function starMaterial(size) {
   });
 }
 
-export function createHeroScene(canvas, { reducedMotion = false } = {}) {
+export async function createHeroScene(canvas, { reducedMotion = false } = {}) {
   const mobile = window.matchMedia("(max-width: 720px)").matches;
   const dpr = Math.min(window.devicePixelRatio || 1, mobile ? 1.15 : 1.6);
+  const { map: moonMap, bumpMap: moonBump } = await loadMoonMaps();
 
   const renderer = new THREE.WebGLRenderer({
     canvas,
@@ -143,53 +76,64 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
   renderer.setPixelRatio(dpr);
   renderer.setClearColor(BG, 1);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
+  renderer.toneMappingExposure = reducedMotion ? 1.05 : 0.06;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 120);
-  camera.position.set(0, 0.15, 8.4);
+  const startZ = reducedMotion ? 8.4 : mobile ? 32 : 48;
+  const startFov = reducedMotion ? 42 : mobile ? 20 : 15;
+  const camera = new THREE.PerspectiveCamera(startFov, 1, 0.08, 240);
+  camera.position.set(
+    reducedMotion || mobile ? 0 : -6.2,
+    reducedMotion ? 0.15 : mobile ? 1.35 : 2.05,
+    startZ,
+  );
 
-  // Key light sits well to the side so a real day/night line crosses the moon
-  // instead of washing the whole disc in even light.
-  const sun = new THREE.DirectionalLight(0xf4f6ff, 3.6);
-  sun.position.set(-5.6, 2, 3.2);
-  const fill = new THREE.HemisphereLight(0x141c30, 0x030304, 0.16);
-  const rim = new THREE.DirectionalLight(0x8d95ac, 0.4);
-  rim.position.set(4.8, -0.8, -4.5);
+  const sun = new THREE.DirectionalLight(0xfff1dc, 4.4);
+  sun.position.set(-5.2, 1.5, 2.4);
+  const fill = new THREE.HemisphereLight(0x10182a, 0x020203, 0.08);
+  const rim = new THREE.DirectionalLight(0x9aa6c4, 0.28);
+  rim.position.set(5.2, -0.6, -4.2);
   scene.add(sun, fill, rim);
 
+  const warpStars = !reducedMotion;
   const stars = new THREE.Points(
-    makeStars(mobile ? 2200 : 5600, 18, 46),
-    starMaterial(1.05),
+    makeStars(mobile ? 2200 : 6200, 16, 58),
+    starMaterial(warpStars ? (mobile ? 0.055 : 0.08) : 1.05, warpStars),
   );
   const bright = new THREE.Points(
-    makeStars(mobile ? 80 : 160, 20, 40),
-    starMaterial(1.8),
+    makeStars(mobile ? 80 : 180, 18, 50),
+    starMaterial(warpStars ? (mobile ? 0.11 : 0.16) : 1.8, warpStars),
   );
   const milky = new THREE.Points(
-    makeStars(mobile ? 900 : 2200, 22, 38, true),
-    starMaterial(1.05),
+    makeStars(mobile ? 900 : 2400, 20, 48, true),
+    starMaterial(warpStars ? (mobile ? 0.05 : 0.075) : 1.05, warpStars),
   );
   milky.rotation.z = 0.55;
-  scene.add(stars, bright, milky);
+  const starField = new THREE.Group();
+  starField.add(stars, bright, milky);
+  if (warpStars) starField.scale.set(1, 1, 4.4);
+  scene.add(starField);
 
-  const { map: moonMap, bumpMap: moonBump } = makeMoonMaps(mobile ? 640 : 1024);
   const moon = new THREE.Mesh(
-    new THREE.SphereGeometry(1.28, mobile ? 64 : 96, mobile ? 64 : 96),
+    new THREE.SphereGeometry(1.28, mobile ? 80 : 160, mobile ? 80 : 160),
     new THREE.MeshStandardMaterial({
       map: moonMap,
       bumpMap: moonBump,
-      bumpScale: 0.32,
-      color: 0xe7e9ee,
-      roughness: 0.92,
-      metalness: 0.0,
+      bumpScale: 0.24,
+      displacementMap: mobile ? null : moonBump,
+      displacementScale: mobile ? 0 : 0.028,
+      displacementBias: mobile ? 0 : -0.01,
+      color: 0xffffff,
+      roughness: 1,
+      metalness: 0,
     }),
   );
   moon.position.set(mobile ? 0 : 1.15, 0.18, 0);
+  moon.rotation.y = MOON_YAW;
 
   const atmosphere = new THREE.Mesh(
-    new THREE.SphereGeometry(1.36, mobile ? 48 : 80, mobile ? 48 : 80),
+    new THREE.SphereGeometry(1.32, mobile ? 48 : 80, mobile ? 48 : 80),
     new THREE.ShaderMaterial({
       transparent: true,
       depthWrite: false,
@@ -205,8 +149,8 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
       fragmentShader: `
         varying vec3 vNormal;
         void main() {
-          float rim = pow(0.62 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 3.4);
-          gl_FragColor = vec4(0.52, 0.6, 0.78, clamp(rim * 0.28, 0.0, 0.28));
+          float rim = pow(1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0))), 5.2);
+          gl_FragColor = vec4(0.78, 0.8, 0.86, clamp(rim * 0.16, 0.0, 0.16));
         }
       `,
     }),
@@ -215,6 +159,7 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
 
   const world = new THREE.Group();
   world.add(moon, atmosphere);
+  if (!reducedMotion) world.scale.setScalar(0.04);
   scene.add(world);
 
   const meteorCount = 16;
@@ -242,10 +187,30 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
 
   const pointer = { x: 0, y: 0 };
   const target = { x: 0, y: 0 };
+  const bloom = { strength: 0.18 };
+  const rig = {
+    x: camera.position.x,
+    y: camera.position.y,
+    z: camera.position.z,
+    fov: camera.fov,
+    lookY: reducedMotion ? 0.1 : 0.68,
+    starSpin: reducedMotion ? 0.004 : 0.18,
+    moonSpin: reducedMotion ? 0.02 : 0.14,
+  };
   let scroll = 0;
+  let introLock = !reducedMotion;
   let running = true;
   let raf = 0;
   const clock = new THREE.Clock();
+  let composer = null;
+  let bloomPass = null;
+
+  if (!reducedMotion && !mobile) {
+    composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, camera));
+    bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), bloom.strength, 0.62, 0.16);
+    composer.addPass(bloomPass);
+  }
 
   const onPointer = (event) => {
     target.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -258,6 +223,8 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
     renderer.setSize(width, height, false);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
+    composer?.setSize(width, height);
+    bloomPass?.setSize(width, height);
   };
 
   const tickMeteor = (delta) => {
@@ -290,22 +257,42 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
     pointer.y += (target.y - pointer.y) * 0.04;
 
     if (!reducedMotion) {
-      stars.rotation.y = time * 0.004;
-      bright.rotation.y = time * 0.004;
-      milky.rotation.y = time * 0.005;
-      moon.rotation.y = time * 0.02;
-      world.position.y = Math.sin(time * 0.22) * 0.04 - scroll * 1.1;
-      world.position.x = (mobile ? 0 : 0.15) + pointer.x * 0.18;
-      sun.position.set(-5.6 + pointer.x * 2.4, 2 + pointer.y * 1.6, 3.2);
+      stars.rotation.y = time * rig.starSpin;
+      bright.rotation.y = time * rig.starSpin;
+      milky.rotation.y = time * (rig.starSpin + 0.001);
+      moon.rotation.y = MOON_YAW + time * rig.moonSpin;
+      if (!introLock) {
+        world.position.y = Math.sin(time * 0.22) * 0.04 - scroll * 1.1;
+        world.position.x = (mobile ? 0 : 0.15) + pointer.x * 0.18;
+        sun.position.set(-5.2 + pointer.x * 2.2, 1.5 + pointer.y * 1.2, 2.4);
+      }
       tickMeteor(delta);
     }
 
-    camera.position.x = pointer.x * 0.35;
-    camera.position.y = 0.15 + pointer.y * 0.16;
-    camera.position.z = 8.4 + scroll * 2.2;
-    camera.lookAt(moon.position.x * 0.35, 0.1 - scroll * 0.4, 0);
+    if (!introLock) {
+      if (reducedMotion) {
+        rig.x = 0;
+        rig.y = 0.15;
+        rig.z = 8.4;
+        rig.lookY = 0.1;
+      } else {
+        rig.x = pointer.x * 0.35;
+        rig.y = 0.15 + pointer.y * 0.16;
+        rig.z = 8.4 + scroll * 2.2;
+        rig.lookY = 0.1 - scroll * 0.4;
+      }
+    }
 
-    renderer.render(scene, camera);
+    camera.position.set(rig.x, rig.y, rig.z);
+    if (Math.abs(camera.fov - rig.fov) > 0.01) {
+      camera.fov = rig.fov;
+      camera.updateProjectionMatrix();
+    }
+    camera.lookAt(moon.position.x * 0.35, rig.lookY, 0);
+
+    if (bloomPass) bloomPass.strength = bloom.strength;
+    if (composer) composer.render();
+    else renderer.render(scene, camera);
 
     if (running) raf = requestAnimationFrame(tick);
   };
@@ -329,7 +316,94 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
   resize();
   tick();
 
+  const playIntro = () => {
+    if (reducedMotion) {
+      introLock = false;
+      return Promise.resolve();
+    }
+    meteorState.wait = 0.55;
+    renderer.toneMappingExposure = 0.05;
+    return new Promise((resolve) => {
+      const tl = gsap.timeline({
+        onComplete() {
+          introLock = false;
+          resolve();
+        },
+      });
+      tl.to(
+        rig,
+        {
+          x: 0,
+          y: 0.12,
+          z: 7.55,
+          fov: 47,
+          lookY: 0.06,
+          starSpin: 0.006,
+          moonSpin: 0.028,
+          duration: 2.95,
+          ease: "power4.inOut",
+        },
+        0,
+      );
+      tl.to(
+        rig,
+        {
+          y: 0.15,
+          z: 8.4,
+          fov: 42,
+          lookY: 0.1,
+          duration: 0.55,
+          ease: "power2.out",
+        },
+        2.95,
+      );
+      tl.to(
+        world.scale,
+        {
+          x: 1,
+          y: 1,
+          z: 1,
+          duration: 2.95,
+          ease: "power4.inOut",
+        },
+        0,
+      );
+      tl.to(
+        starField.scale,
+        {
+          z: 1,
+          duration: 3.15,
+          ease: "power3.out",
+        },
+        0,
+      );
+      tl.to(
+        renderer,
+        {
+          toneMappingExposure: 1.28,
+          duration: 2.4,
+          ease: "power2.out",
+        },
+        0.15,
+      );
+      tl.to(
+        renderer,
+        {
+          toneMappingExposure: 1.05,
+          duration: 0.75,
+          ease: "power1.out",
+        },
+        2.7,
+      );
+      if (bloomPass) {
+        tl.to(bloom, { strength: 1.22, duration: 1.6, ease: "power2.out" }, 0.2);
+        tl.to(bloom, { strength: 0.42, duration: 1.1, ease: "power2.inOut" }, 2.15);
+      }
+    });
+  };
+
   return {
+    playIntro,
     setScroll(value) {
       scroll = value;
     },
@@ -348,7 +422,13 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
     destroy() {
       running = false;
       cancelAnimationFrame(raf);
+      gsap.killTweensOf(rig);
+      gsap.killTweensOf(world.scale);
+      gsap.killTweensOf(starField.scale);
+      gsap.killTweensOf(renderer);
+      gsap.killTweensOf(bloom);
       observer.disconnect();
+      composer?.dispose();
       window.removeEventListener("pointermove", onPointer);
       moonMap.dispose();
       moonBump.dispose();

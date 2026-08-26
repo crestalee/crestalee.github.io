@@ -9,7 +9,7 @@
       <span>Y {{ y }}</span>
       <span>{{ pct }}</span>
     </div>
-    <div class="frame-progress">
+    <div class="frame-progress" :style="{ opacity: progress > 0.02 ? 1 : 0 }">
       <i :style="{ transform: `scaleX(${progress})` }" />
     </div>
   </div>
