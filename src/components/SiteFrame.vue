@@ -16,6 +16,7 @@
 </template>
 
 <script setup>
+/** Corner marks and pointer readout. Hidden on small screens. */
 import { onMounted, onUnmounted, ref } from "vue";
 
 const x = ref("0.500");

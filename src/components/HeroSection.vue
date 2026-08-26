@@ -6,7 +6,7 @@
       <span>{{ t.hero.index }}</span>
       <span>{{ t.hero.system }}</span>
     </div>
-    <a class="scroll-cue" href="#experiments">{{ t.hero.scroll }}</a>
+    <a class="scroll-cue" href="#work">{{ t.hero.scroll }}</a>
     <div class="hero-copy" :style="shift">
       <h1 class="hero-brand">CRESTALEE<span class="reg">®</span></h1>
     </div>
@@ -18,6 +18,10 @@
 </template>
 
 <script setup>
+/**
+ * Title card over the canvas. Waits for `crestalee-scene-ready`, then
+ * fades in with the warp. Fallback timer covers a WebGL init failure.
+ */
 import { computed, onMounted, onUnmounted, reactive, ref } from "vue";
 import gsap from "gsap";
 import { useLocale } from "../composables/useLocale.js";

@@ -12,14 +12,15 @@
       v-for="(item, index) in projects"
       :key="item.id"
       class="work-showcase"
-      :class="{ 'is-flip': index % 2 === 1 }"
+      :class="{ 'is-flip': index % 2 === 1, 'is-phone': item.shape === 'phone' }"
       data-reveal
     >
-      <div class="work-preview">
+      <div class="work-preview" :class="{ 'is-phone': item.shape === 'phone' }">
         <div class="work-preview-glow" />
         <a
           v-if="item.href"
           class="work-preview-frame"
+          :class="{ 'is-phone': item.shape === 'phone' }"
           :href="item.href"
           target="_blank"
           rel="noreferrer"
@@ -27,7 +28,7 @@
         >
           <img :src="item.preview" :alt="item.previewAlt[locale]" />
         </a>
-        <div v-else class="work-preview-frame">
+        <div v-else class="work-preview-frame" :class="{ 'is-phone': item.shape === 'phone' }">
           <img :src="item.preview" :alt="item.previewAlt[locale]" />
         </div>
       </div>
@@ -53,6 +54,7 @@
 </template>
 
 <script setup>
+/** `shape: "phone"` crops a vertical UI into a device frame. */
 import { projects } from "../data/projects.js";
 import { useLocale } from "../composables/useLocale.js";
 

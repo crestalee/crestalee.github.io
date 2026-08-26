@@ -1,3 +1,4 @@
+/** Identity used by the header, footer, and mailto link. */
 export const site = {
   name: "CRESTALEE",
   mark: "CRESTALEE®",

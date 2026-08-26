@@ -6,11 +6,16 @@
 </template>
 
 <script setup>
+/**
+ * Loads the WebGL scene after first paint so the CSS fallback can show.
+ * Dispatches `crestalee-scene-ready` for the title intro in HeroSection.
+ */
 import { onMounted, onUnmounted, ref } from "vue";
 
 const canvasRef = ref(null);
 const ready = ref(false);
 let scene = null;
+let offScroll = null;
 
 onMounted(async () => {
   const canvas = canvasRef.value;
@@ -19,7 +24,7 @@ onMounted(async () => {
   try {
     const { createHeroScene } = await import("../webgl/heroScene.js");
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    scene = await createHeroScene(canvas, { reducedMotion: reduced });
+    scene = createHeroScene(canvas, { reducedMotion: reduced });
     ready.value = true;
     window.dispatchEvent(new CustomEvent("crestalee-scene-ready"));
     scene.playIntro?.();
@@ -29,14 +34,14 @@ onMounted(async () => {
       scene?.setScroll(Math.min(window.scrollY / max, 1));
     };
     window.addEventListener("scroll", onScroll, { passive: true });
-    canvas._offScroll = () => window.removeEventListener("scroll", onScroll);
+    offScroll = () => window.removeEventListener("scroll", onScroll);
   } catch (error) {
     console.error(error);
   }
 });
 
 onUnmounted(() => {
-  canvasRef.value?._offScroll?.();
+  offScroll?.();
   scene?.destroy();
 });
 </script>

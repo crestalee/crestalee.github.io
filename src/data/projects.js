@@ -13,6 +13,7 @@ export const projects = [
     },
     stack: ["JAVA", "SPRING BOOT", "REACT"],
     href: "",
+    shape: "phone",
     preview: "/work/parallel-life.png",
     previewAlt: {
       en: "Parallel Life start screen",

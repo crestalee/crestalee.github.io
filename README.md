@@ -1,10 +1,8 @@
 # CRESTALEE®
 
-个人主页：[crestalee.github.io](https://crestalee.github.io)
+[crestalee.github.io](https://crestalee.github.io)
 
-软件工程师。Java / Vue / AI。
-
-站点是自己写的：Vue 3、Vite、Three.js。中英切换。GitHub Pages 部署。
+Vue 3 · Vite · Three.js · GSAP · Lenis。中英切换。推 `main` 即部署。
 
 ```bash
 npm install

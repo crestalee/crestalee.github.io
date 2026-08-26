@@ -4,6 +4,8 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 gsap.registerPlugin(ScrollTrigger);
 
+/** Lenis stays stopped until the intro unlocks the page. */
+
 export function startSmoothScroll() {
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (reduced) {
@@ -52,6 +54,7 @@ export function startSmoothScroll() {
   };
 }
 
+/** Fade sections in once, when they first enter the viewport. */
 export function revealSections(root) {
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const nodes = root.querySelectorAll("[data-reveal]");

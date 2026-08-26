@@ -3,7 +3,6 @@
     <a class="header-mark" href="#top">{{ site.mark }}</a>
     <div class="header-end">
       <nav>
-        <a href="#experiments">{{ t.nav.lab }}</a>
         <a href="#work">{{ t.nav.work }}</a>
         <a href="#about">{{ t.nav.about }}</a>
       </nav>
@@ -12,7 +11,7 @@
         :href="site.github"
         target="_blank"
         rel="noreferrer"
-        :aria-label="t.contact.github"
+        :aria-label="t.footer.github"
       >
         <GitHubMark />
       </a>

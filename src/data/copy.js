@@ -1,10 +1,10 @@
+/** On-page strings. Keep both locales in lockstep. */
 export const copy = {
   en: {
     langSwitch: "Switch to Chinese",
     langTarget: "中",
     nav: {
       work: "Work",
-      lab: "Lab",
       about: "About",
     },
     hero: {
@@ -21,15 +21,6 @@ export const copy = {
       private: "Private",
       view: "Open ↗",
     },
-    experiments: {
-      kicker: "Lab",
-      items: [
-        { index: "01", name: "FIELD" },
-        { index: "02", name: "SIGNAL" },
-        { index: "03", name: "ORBIT" },
-        { index: "04", name: "TRACE" },
-      ],
-    },
     about: {
       kicker: "About",
       facts: [
@@ -37,11 +28,6 @@ export const copy = {
         { k: "02", v: "MOYU READER" },
         { k: "03", v: "CRESTALEE.GITHUB.IO" },
       ],
-    },
-    contact: {
-      kicker: "Contact",
-      github: "GitHub ↗",
-      email: "Email ↗",
     },
     footer: {
       github: "GitHub ↗",
@@ -53,7 +39,6 @@ export const copy = {
     langTarget: "EN",
     nav: {
       work: "作品",
-      lab: "实验",
       about: "关于",
     },
     hero: {
@@ -70,15 +55,6 @@ export const copy = {
       private: "未公开",
       view: "打开 ↗",
     },
-    experiments: {
-      kicker: "实验",
-      items: [
-        { index: "01", name: "FIELD" },
-        { index: "02", name: "SIGNAL" },
-        { index: "03", name: "ORBIT" },
-        { index: "04", name: "TRACE" },
-      ],
-    },
     about: {
       kicker: "关于",
       facts: [
@@ -86,11 +62,6 @@ export const copy = {
         { k: "02", v: "摸鱼阅读器" },
         { k: "03", v: "CRESTALEE.GITHUB.IO" },
       ],
-    },
-    contact: {
-      kicker: "联系",
-      github: "GitHub ↗",
-      email: "邮箱 ↗",
     },
     footer: {
       github: "GitHub ↗",

@@ -1,19 +1,13 @@
 import { computed, ref } from "vue";
 import { copy } from "../data/copy.js";
 
+/** Shared across header, hero, work, about, footer. */
 const STORAGE = "crestalee-lang";
 const locale = ref("en");
 
 function apply(next) {
   locale.value = next;
   document.documentElement.lang = next === "zh" ? "zh-CN" : "en";
-  const description = document.querySelector('meta[name="description"]');
-  if (description) {
-    description.setAttribute(
-      "content",
-      "CRESTALEE",
-    );
-  }
 }
 
 export function initLocale() {
