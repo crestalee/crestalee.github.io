@@ -1,5 +1,11 @@
 <template>
-  <button class="lang-btn" type="button" :aria-label="t.langSwitch" @click="toggle">
+  <button
+    class="lang-btn"
+    type="button"
+    :aria-label="t.langSwitch"
+    @mouseenter="playHover"
+    @click="handleClick"
+  >
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <circle cx="12" cy="12" r="9.2" fill="none" stroke="currentColor" stroke-width="1.2" />
       <path
@@ -15,6 +21,13 @@
 
 <script setup>
 import { useLocale } from "../composables/useLocale.js";
+import { useSound } from "../composables/useSound.js";
 
 const { t, toggle } = useLocale();
+const { playHover, playClick } = useSound();
+
+function handleClick() {
+  playClick();
+  toggle();
+}
 </script>

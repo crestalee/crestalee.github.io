@@ -1,4 +1,24 @@
-import * as THREE from "three";
+import {
+  ACESFilmicToneMapping,
+  BufferAttribute,
+  BufferGeometry,
+  Clock,
+  EllipseCurve,
+  Group,
+  Line,
+  LineBasicMaterial,
+  LineLoop,
+  LineSegments,
+  MathUtils,
+  PerspectiveCamera,
+  Points,
+  PointsMaterial,
+  Scene,
+  SRGBColorSpace,
+  Vector2,
+  Vector3,
+  WebGLRenderer,
+} from "three";
 import gsap from "gsap";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
@@ -31,14 +51,14 @@ function makeStars(count, radiusMin, radiusMax, band = false) {
     colors[i * 3 + 1] = shade;
     colors[i * 3 + 2] = Math.min(1, shade + 0.04);
   }
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-  geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+  const geometry = new BufferGeometry();
+  geometry.setAttribute("position", new BufferAttribute(positions, 3));
+  geometry.setAttribute("color", new BufferAttribute(colors, 3));
   return geometry;
 }
 
 function starMaterial(size, attenuation = false) {
-  return new THREE.PointsMaterial({
+  return new PointsMaterial({
     size,
     sizeAttenuation: attenuation,
     vertexColors: true,
@@ -49,7 +69,7 @@ function starMaterial(size, attenuation = false) {
 }
 
 function lineMaterial(opacity, vertexColors = false) {
-  return new THREE.LineBasicMaterial({
+  return new LineBasicMaterial({
     color: 0xd5dae2,
     vertexColors,
     transparent: true,
@@ -71,10 +91,10 @@ function createFieldTicks(count, radiusMin, radiusMax) {
   }
   const positions = new Float32Array(count * 6);
   const colors = new Float32Array(count * 6);
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-  geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-  const mesh = new THREE.LineSegments(geometry, lineMaterial(0.2, true));
+  const geometry = new BufferGeometry();
+  geometry.setAttribute("position", new BufferAttribute(positions, 3));
+  geometry.setAttribute("color", new BufferAttribute(colors, 3));
+  const mesh = new LineSegments(geometry, lineMaterial(0.2, true));
   return { mesh, centers, positions, colors, geometry };
 }
 
@@ -86,13 +106,16 @@ function createOrbits() {
     { rx: 12.8, rz: 10.2, rotX: 1.04, rotZ: 0.1, opacity: 0.1, speed: 0.055 },
     { rx: 26, rz: 8.6, rotX: 0.22, rotZ: 0.5, opacity: 0.06, speed: 0.022 },
   ];
-  const group = new THREE.Group();
+  const group = new Group();
   paths.forEach((path) => {
-    const hold = new THREE.Group();
+    const hold = new Group();
     hold.rotation.set(path.rotX, 0, path.rotZ);
-    const curve = new THREE.EllipseCurve(0, 0, path.rx, path.rz, 0, Math.PI * 2, false, 0);
-    const points = curve.getPoints(160).map((point) => new THREE.Vector3(point.x, 0, point.y));
-    const mesh = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(points), lineMaterial(path.opacity));
+    const curve = new EllipseCurve(0, 0, path.rx, path.rz, 0, Math.PI * 2, false, 0);
+    const points = curve.getPoints(160).map((point) => new Vector3(point.x, 0, point.y));
+    const mesh = new LineLoop(
+      new BufferGeometry().setFromPoints(points),
+      lineMaterial(path.opacity),
+    );
     mesh.material.color.setHex(0xb4bcc8);
     hold.add(mesh);
     group.add(hold);
@@ -100,11 +123,11 @@ function createOrbits() {
 
   const dustCount = paths.length * 3;
   const dustPositions = new Float32Array(dustCount * 3);
-  const dustGeometry = new THREE.BufferGeometry();
-  dustGeometry.setAttribute("position", new THREE.BufferAttribute(dustPositions, 3));
-  const dust = new THREE.Points(
+  const dustGeometry = new BufferGeometry();
+  dustGeometry.setAttribute("position", new BufferAttribute(dustPositions, 3));
+  const dust = new Points(
     dustGeometry,
-    new THREE.PointsMaterial({
+    new PointsMaterial({
       color: 0xd7dbe3,
       size: 0.09,
       sizeAttenuation: true,
@@ -120,10 +143,10 @@ function createOrbits() {
 /** Constellation segments, filled each frame from nearby bright stars. */
 function createTraceLines(maxPairs) {
   const positions = new Float32Array(maxPairs * 6);
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  const geometry = new BufferGeometry();
+  geometry.setAttribute("position", new BufferAttribute(positions, 3));
   geometry.setDrawRange(0, 0);
-  const mesh = new THREE.LineSegments(geometry, lineMaterial(0.16));
+  const mesh = new LineSegments(geometry, lineMaterial(0.16));
   mesh.material.color.setHex(0x9aa8c2);
   return { mesh, positions, geometry, maxPairs };
 }
@@ -131,9 +154,9 @@ function createTraceLines(maxPairs) {
 /** A faint horizon line that breathes with time and pointer. */
 function createSignalArc(count) {
   const positions = new Float32Array(count * 3);
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-  const mesh = new THREE.Line(geometry, lineMaterial(0.08));
+  const geometry = new BufferGeometry();
+  geometry.setAttribute("position", new BufferAttribute(positions, 3));
+  const mesh = new Line(geometry, lineMaterial(0.08));
   mesh.material.color.setHex(0x8b93a3);
   const energy = new Float32Array(count);
   return { mesh, positions, geometry, energy, count };
@@ -143,7 +166,7 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
   const mobile = window.matchMedia("(max-width: 720px)").matches;
   const dpr = Math.min(window.devicePixelRatio || 1, mobile ? 1.15 : 1.6);
 
-  const renderer = new THREE.WebGLRenderer({
+  const renderer = new WebGLRenderer({
     canvas,
     antialias: !mobile,
     alpha: false,
@@ -151,14 +174,14 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
   });
   renderer.setPixelRatio(dpr);
   renderer.setClearColor(BG, 1);
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMapping = ACESFilmicToneMapping;
   renderer.toneMappingExposure = reducedMotion ? 1.05 : 0.06;
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.outputColorSpace = SRGBColorSpace;
 
-  const scene = new THREE.Scene();
+  const scene = new Scene();
   const startZ = reducedMotion ? 6.2 : mobile ? 28 : 42;
   const startFov = reducedMotion ? 48 : mobile ? 22 : 16;
-  const camera = new THREE.PerspectiveCamera(startFov, 1, 0.08, 240);
+  const camera = new PerspectiveCamera(startFov, 1, 0.08, 240);
   camera.position.set(
     reducedMotion || mobile ? 0 : -4.8,
     reducedMotion ? 0.2 : mobile ? 1.1 : 1.7,
@@ -166,20 +189,20 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
   );
 
   const warpStars = !reducedMotion;
-  const stars = new THREE.Points(
+  const stars = new Points(
     makeStars(mobile ? 2400 : 6800, 16, 58),
     starMaterial(warpStars ? (mobile ? 0.055 : 0.08) : 1.05, warpStars),
   );
-  const bright = new THREE.Points(
+  const bright = new Points(
     makeStars(mobile ? 90 : 200, 18, 50),
     starMaterial(warpStars ? (mobile ? 0.11 : 0.16) : 1.8, warpStars),
   );
-  const milky = new THREE.Points(
+  const milky = new Points(
     makeStars(mobile ? 1000 : 2600, 20, 48, true),
     starMaterial(warpStars ? (mobile ? 0.05 : 0.075) : 1.05, warpStars),
   );
   milky.rotation.z = 0.55;
-  const starField = new THREE.Group();
+  const starField = new Group();
   starField.add(stars, bright, milky);
   if (warpStars) starField.scale.set(1, 1, 4.8);
   scene.add(starField);
@@ -201,20 +224,20 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
   trace.mesh.material.opacity = 0;
   signal.mesh.material.opacity = 0;
 
-  const _attractor = new THREE.Vector3();
-  const _center = new THREE.Vector3();
-  const _screen = new THREE.Vector3();
-  const _star = new THREE.Vector3();
-  const _dust = new THREE.Vector3();
+  const _attractor = new Vector3();
+  const _center = new Vector3();
+  const _screen = new Vector3();
+  const _star = new Vector3();
+  const _dust = new Vector3();
   const nearStars = [];
 
   const meteorCount = 16;
   const meteorPos = new Float32Array(meteorCount * 3);
-  const meteorGeo = new THREE.BufferGeometry();
-  meteorGeo.setAttribute("position", new THREE.BufferAttribute(meteorPos, 3));
-  const meteor = new THREE.Points(
+  const meteorGeo = new BufferGeometry();
+  meteorGeo.setAttribute("position", new BufferAttribute(meteorPos, 3));
+  const meteor = new Points(
     meteorGeo,
-    new THREE.PointsMaterial({
+    new PointsMaterial({
       color: 0xe8eef8,
       size: 1.2,
       sizeAttenuation: false,
@@ -227,8 +250,8 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
   const meteorState = {
     wait: 3,
     life: 0,
-    origin: new THREE.Vector3(8, 4, -6),
-    dir: new THREE.Vector3(-1, -0.35, 0.2),
+    origin: new Vector3(8, 4, -6),
+    dir: new Vector3(-1, -0.35, 0.2),
   };
 
   const pointer = { x: 0, y: 0 };
@@ -247,14 +270,15 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
   let introLock = !reducedMotion;
   let running = true;
   let raf = 0;
-  const clock = new THREE.Clock();
+  let frameCount = 0;
+  const clock = new Clock();
   let composer = null;
   let bloomPass = null;
 
   if (!reducedMotion && !mobile) {
     composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, camera));
-    bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), bloom.strength, 0.55, 0.2);
+    bloomPass = new UnrealBloomPass(new Vector2(1, 1), bloom.strength, 0.55, 0.2);
     composer.addPass(bloomPass);
   }
 
@@ -414,8 +438,14 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
       meteor.material.opacity = Math.max(0, meteorState.life);
       for (let i = 0; i < meteorCount; i += 1) {
         const along = i / meteorCount;
-        meteorPos[i * 3] = meteorState.origin.x + meteorState.dir.x * along * 4.5 + (1 - meteorState.life) * meteorState.dir.x * 10;
-        meteorPos[i * 3 + 1] = meteorState.origin.y + meteorState.dir.y * along * 4.5 + (1 - meteorState.life) * meteorState.dir.y * 10;
+        meteorPos[i * 3] =
+          meteorState.origin.x +
+          meteorState.dir.x * along * 4.5 +
+          (1 - meteorState.life) * meteorState.dir.x * 10;
+        meteorPos[i * 3 + 1] =
+          meteorState.origin.y +
+          meteorState.dir.y * along * 4.5 +
+          (1 - meteorState.life) * meteorState.dir.y * 10;
         meteorPos[i * 3 + 2] = meteorState.origin.z + meteorState.dir.z * along * 2;
       }
       meteorGeo.attributes.position.needsUpdate = true;
@@ -445,12 +475,12 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
       tickMeteor(delta);
     }
 
-    const visible = atmos.fade * (0.62 + 0.38 * (1 - THREE.MathUtils.smoothstep(scroll, 0.2, 0.75)));
+    const visible = atmos.fade * (0.62 + 0.38 * (1 - MathUtils.smoothstep(scroll, 0.2, 0.75)));
     setAtmosOpacity(visible);
     if (!introLock && visible > 0.02 && !reducedMotion) {
       tickField();
       tickOrbits(time);
-      tickTrace();
+      if (frameCount % 2 === 0) tickTrace();
       tickSignal(time);
     }
 

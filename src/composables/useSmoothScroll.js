@@ -4,14 +4,40 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 gsap.registerPlugin(ScrollTrigger);
 
-/** Lenis stays stopped until the intro unlocks the page. */
+const listeners = new Set();
 
+/** Register a centralized smooth scroll subscriber. */
+export function onSmoothScroll(fn) {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+}
+
+function notifyScroll(data) {
+  listeners.forEach((fn) => {
+    try {
+      fn(data);
+    } catch (e) {
+      console.error(e);
+    }
+  });
+}
+
+/** Lenis stays stopped until the intro unlocks the page. */
 export function startSmoothScroll() {
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (reduced) {
+    const onNativeScroll = () => {
+      const max = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
+      const progress = Math.min(Math.max(window.scrollY / max, 0), 1);
+      notifyScroll({ progress, scroll: window.scrollY });
+    };
+    window.addEventListener("scroll", onNativeScroll, { passive: true });
+    onNativeScroll();
     return {
       lenis: null,
-      destroy() {},
+      destroy() {
+        window.removeEventListener("scroll", onNativeScroll);
+      },
     };
   }
 
@@ -26,7 +52,11 @@ export function startSmoothScroll() {
     window.addEventListener("crestalee-intro-end", () => lenis.start(), { once: true });
   }
 
-  lenis.on("scroll", ScrollTrigger.update);
+  lenis.on("scroll", (e) => {
+    ScrollTrigger.update();
+    notifyScroll({ progress: e.progress ?? 0, scroll: e.scroll ?? 0, velocity: e.velocity ?? 0 });
+  });
+
   const ticker = (time) => {
     lenis.raf(time * 1000);
   };

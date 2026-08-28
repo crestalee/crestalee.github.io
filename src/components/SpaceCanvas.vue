@@ -11,6 +11,7 @@
  * Dispatches `crestalee-scene-ready` for the title intro in HeroSection.
  */
 import { onMounted, onUnmounted, ref } from "vue";
+import { onSmoothScroll } from "../composables/useSmoothScroll.js";
 
 const canvasRef = ref(null);
 const ready = ref(false);
@@ -29,12 +30,9 @@ onMounted(async () => {
     window.dispatchEvent(new CustomEvent("crestalee-scene-ready"));
     scene.playIntro?.();
 
-    const onScroll = () => {
-      const max = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
-      scene?.setScroll(Math.min(window.scrollY / max, 1));
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    offScroll = () => window.removeEventListener("scroll", onScroll);
+    offScroll = onSmoothScroll(({ progress }) => {
+      scene?.setScroll(progress);
+    });
   } catch (error) {
     console.error(error);
   }

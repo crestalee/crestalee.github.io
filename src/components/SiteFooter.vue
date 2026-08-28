@@ -1,21 +1,31 @@
 <template>
   <footer class="footer">
-    <span>{{ site.mark }}</span>
-    <div class="footer-links">
-      <a class="footer-github" :href="site.github" target="_blank" rel="noreferrer">
-        <GitHubMark />
-        <span>{{ t.footer.github }}</span>
-      </a>
-      <a :href="`mailto:${site.email}`">{{ t.footer.email }}</a>
+    <div class="footer-brand">
+      <span class="footer-mark">{{ site.mark }}</span>
+      <span class="footer-rights">{{ t.footer.rights }}</span>
     </div>
-    <span>{{ site.year }}</span>
+
+    <div class="footer-end">
+      <a
+        class="back-to-top"
+        href="#top"
+        :aria-label="t.footer.top"
+        @mouseenter="playHover"
+        @click="playClick"
+      >
+        <span class="top-arrow">↑</span>
+        <span>{{ t.footer.top }}</span>
+      </a>
+      <span class="footer-year">© {{ site.year }}</span>
+    </div>
   </footer>
 </template>
 
 <script setup>
 import { site } from "../data/site.js";
 import { useLocale } from "../composables/useLocale.js";
-import GitHubMark from "./GitHubMark.vue";
+import { useSound } from "../composables/useSound.js";
 
 const { t } = useLocale();
+const { playHover, playClick } = useSound();
 </script>

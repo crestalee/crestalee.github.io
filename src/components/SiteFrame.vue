@@ -18,6 +18,7 @@
 <script setup>
 /** Corner marks and pointer readout. Hidden on small screens. */
 import { onMounted, onUnmounted, ref } from "vue";
+import { onSmoothScroll } from "../composables/useSmoothScroll.js";
 
 const x = ref("0.500");
 const y = ref("0.500");
@@ -29,22 +30,19 @@ const onMove = (event) => {
   y.value = (event.clientY / window.innerHeight).toFixed(3);
 };
 
-const onScroll = () => {
-  const max = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
-  const next = Math.min(window.scrollY / max, 1);
-  progress.value = next;
-  pct.value = String(Math.round(next * 100)).padStart(3, "0");
-};
+let offScroll = null;
 
 onMounted(() => {
   if (!window.matchMedia("(pointer: fine)").matches) return;
   window.addEventListener("pointermove", onMove, { passive: true });
-  window.addEventListener("scroll", onScroll, { passive: true });
-  onScroll();
+  offScroll = onSmoothScroll(({ progress: next }) => {
+    progress.value = next;
+    pct.value = String(Math.round(next * 100)).padStart(3, "0");
+  });
 });
 
 onUnmounted(() => {
   window.removeEventListener("pointermove", onMove);
-  window.removeEventListener("scroll", onScroll);
+  offScroll?.();
 });
 </script>

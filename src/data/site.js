@@ -4,5 +4,5 @@ export const site = {
   mark: "CRESTALEE®",
   github: "https://github.com/crestalee",
   email: "crestalee@qq.com",
-  year: 2026,
+  year: new Date().getFullYear(),
 };
