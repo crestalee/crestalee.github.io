@@ -68,8 +68,8 @@ export const projects = [
       zh: "这一页上的水。",
     },
     detail: {
-      en: "Dusk on an ocean, drawn in the browser. Scroll, and the light changes.",
-      zh: "浏览器里的一片黄昏海。滚动的时候，光线会变。",
+      en: "A rough blue sea, drawn in the browser. Scroll, and the light changes.",
+      zh: "浏览器里的一片蓝色的海。滚动的时候，浪和光线会变。",
     },
     stack: "Vue · Three.js",
     href: "https://github.com/crestalee/crestalee.github.io",
@@ -79,8 +79,8 @@ export const projects = [
     width: 1200,
     height: 630,
     previewAlt: {
-      en: "This site, an ocean at dusk",
-      zh: "这个站点，黄昏时的海",
+      en: "This site, a rough blue sea",
+      zh: "这个站点，一片汹涌的海",
     },
   },
 ];

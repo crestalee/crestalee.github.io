@@ -4,7 +4,7 @@ export const copy = {
     meta: {
       title: "Cresta Lee",
       description:
-        "A personal site by Cresta Lee. An ocean at dusk, and three pieces of software: Parallel Life, Moyu Reader, and this page.",
+        "A personal site by Cresta Lee. A rough blue sea, and three pieces of software: Parallel Life, Moyu Reader, and this page.",
     },
     langSwitch: "Switch to Chinese",
     langTarget: "中文",
@@ -37,7 +37,7 @@ export const copy = {
     meta: {
       title: "Cresta Lee",
       description:
-        "Cresta Lee 的个人站点。黄昏的海，以及三件软件：Parallel Life、摸鱼阅读器，和这个页面。",
+        "Cresta Lee 的个人站点。一片蓝色的海，以及三件软件：Parallel Life、摸鱼阅读器，和这个页面。",
     },
     langSwitch: "Switch to English",
     langTarget: "EN",

@@ -4,8 +4,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 gsap.registerPlugin(ScrollTrigger);
 
 /**
- * Scroll is a cut. The title leaves with the first beat.
- * Stills drift a little against the camera.
+ * Titles arrive and leave with the scroll. The sea stays the picture.
  */
 export function bindFilmMotion() {
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -18,18 +17,19 @@ export function bindFilmMotion() {
     return tween;
   };
 
-  gsap.utils.toArray(".still").forEach((still) => {
+  gsap.utils.toArray(".beat-copy").forEach((copy) => {
     track(
       gsap.fromTo(
-        still,
-        { y: 32 },
+        copy,
+        { autoAlpha: 0, y: 28 },
         {
-          y: -24,
+          autoAlpha: 1,
+          y: 0,
           ease: "none",
           scrollTrigger: {
-            trigger: still,
-            start: "top bottom",
-            end: "bottom top",
+            trigger: copy,
+            start: "top 88%",
+            end: "top 58%",
             scrub: true,
           },
         },
@@ -42,13 +42,13 @@ export function bindFilmMotion() {
     if (!hero) return;
     track(
       gsap.to(hero, {
-        y: -28,
+        y: -24,
         autoAlpha: 0,
         ease: "none",
         scrollTrigger: {
           trigger: ".hero",
           start: "center center",
-          end: "bottom top",
+          end: "bottom 35%",
           scrub: true,
         },
       }),

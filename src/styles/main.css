@@ -57,8 +57,8 @@ body {
 }
 
 ::selection {
-  background: #f0d2b4;
-  color: #1a120e;
+  background: #d5e2ee;
+  color: #101820;
 }
 
 a {
@@ -263,80 +263,54 @@ html.is-intro .letterbox {
 
 .beat {
   position: relative;
+  min-height: 72vh;
+  min-height: 72svh;
+  display: flex;
+  align-items: flex-end;
+  padding: 18vh var(--pad) 14vh;
+}
+
+.beat:first-child {
   min-height: 100vh;
   min-height: 100svh;
-  display: grid;
-  grid-template-columns: minmax(0, 0.86fr) minmax(0, 1.14fr);
-  align-items: center;
-  gap: clamp(1.5rem, 4vw, 4.5rem);
-  padding: 16vh var(--pad) 12vh;
-}
-
-.beat.is-flip {
-  grid-template-columns: minmax(0, 1.14fr) minmax(0, 0.86fr);
-}
-
-.beat.is-flip .beat-copy {
-  order: 2;
-}
-
-.beat::before {
-  content: "";
-  position: absolute;
-  inset: 12% 42% 12% 0;
-  background: radial-gradient(ellipse at 20% 50%, rgba(7, 6, 12, 0.42), transparent 72%);
-  pointer-events: none;
-}
-
-.beat.is-flip::before {
-  inset: 12% 0 12% 42%;
-}
-
-.beat-copy,
-.still {
-  min-width: 0;
+  padding-top: 46vh;
 }
 
 .beat-copy {
   position: relative;
   z-index: 1;
+  max-width: min(28rem, 100%);
 }
 
-.beat-index {
-  margin: 0;
-  font-size: 0.72rem;
-  font-weight: 500;
-  letter-spacing: 0.22em;
-  color: var(--faint);
+.beat h2,
+.beat-line,
+.beat-note,
+.beat-action {
+  text-shadow: 0 10px 32px rgba(8, 14, 22, 0.4);
 }
 
 .beat h2 {
-  margin: 0.4rem 0 0.7rem;
+  margin: 0;
+  max-width: 8ch;
   font-family: var(--serif);
   font-weight: 400;
-  font-size: clamp(3rem, 5.6vw, 5.4rem);
-  line-height: 0.92;
+  font-size: clamp(3rem, 7vw, 6.4rem);
+  line-height: 0.9;
   letter-spacing: -0.03em;
 }
 
 .beat-line {
-  margin: 0 0 0.85rem;
+  margin: 0.85rem 0 0;
+  max-width: 24ch;
   font-family: var(--serif);
   font-style: italic;
-  font-size: clamp(1.25rem, 2vw, 1.7rem);
-}
-
-.beat-detail {
-  margin: 0;
-  max-width: 36ch;
+  font-size: clamp(1.2rem, 2vw, 1.65rem);
   color: var(--muted);
 }
 
-.beat-stack,
 .beat-note {
-  margin: 1rem 0 0;
-  font-size: 0.82rem;
-  letter-spacing: 0.04em;
+  margin: 1.1rem 0 0;
+  font-size: 0.92rem;
   color: var(--faint);
 }
 
@@ -349,38 +323,6 @@ html.is-intro .letterbox {
   border-bottom: 1px solid rgba(246, 241, 232, 0.55);
   padding-bottom: 0.12rem;
   font-size: 0.92rem;
-}
-
-.still {
-  position: relative;
-  z-index: 1;
-  margin: 0;
-}
-
-.still img {
-  display: block;
-  width: 100%;
-  height: auto;
-  max-height: 70vh;
-  object-fit: contain;
-  border-radius: 2px;
-  box-shadow:
-    0 30px 80px rgba(0, 0, 0, 0.38),
-    0 0 0 1px rgba(246, 241, 232, 0.2);
-}
-
-.still.is-phone {
-  display: flex;
-  justify-content: center;
-}
-
-.still.is-phone img {
-  width: auto;
-  max-width: min(100%, 320px);
-  height: min(68vh, 620px);
-  aspect-ratio: auto;
-  object-fit: contain;
-  background: transparent;
 }
 
 .close {
@@ -468,25 +410,8 @@ html.is-intro .letterbox {
     gap: 0.85rem;
   }
 
-  .beat,
-  .beat.is-flip {
-    grid-template-columns: 1fr;
-    align-content: center;
-    padding-top: 18vh;
-  }
-
-  .beat.is-flip .beat-copy,
-  .beat.is-flip .still {
-    order: initial;
-  }
-
-  .beat::before,
-  .beat.is-flip::before {
-    inset: 8% 0;
-  }
-
-  .still.is-phone img {
-    height: min(58vh, 540px);
+  .beat:first-child {
+    padding-top: 34vh;
   }
 
   .hero-copy {

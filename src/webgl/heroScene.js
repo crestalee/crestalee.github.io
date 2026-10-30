@@ -20,100 +20,87 @@ import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 
 /**
- * One shot: a camera low over an ocean at dusk.
+ * One shot: a camera among rolling storm waves.
  *
- * The scroll position is a dolly, not a dashboard. It eases from the opener
- * into blue hour. Bloom only catches the sun and the reflection path.
- * `prefers-reduced-motion` renders a single still and does not keep drawing.
+ * Light stays cold. Scroll only deepens the blue; it does not turn the
+ * sea gold. `prefers-reduced-motion` renders a single still.
  */
 
-const CLEAR = 0x07060c;
+const CLEAR = 0x0b1218;
 
-/** Hero frame the intro lands on. Later beats are SHOTS[0]. */
+/** Hero frame the intro lands on. Later beats ease away from this. */
 const HERO = {
-  x: 0.28,
-  y: 2.02,
-  z: 7.5,
-  lx: 0.02,
-  ly: 0.42,
-  lz: -18,
-  fov: 34,
-  sunY: 0.1,
+  x: 0.15,
+  y: 4.15,
+  z: 10.4,
+  lx: -0.55,
+  ly: 0.15,
+  lz: -14,
+  fov: 42,
+  sunY: 0.95,
   night: 0,
 };
 
-/** Opener: tighter lens, closer to the water, sun nearer the middle. */
+/** Opener: lower, tighter, already inside the swell. */
 const INTRO_FROM = {
-  x: -0.7,
-  y: 1.62,
-  z: 4.5,
-  lx: 1.6,
-  ly: 0.95,
-  lz: -12,
-  fov: 22,
+  x: 0.85,
+  y: 3.25,
+  z: 6.6,
+  lx: -1.4,
+  ly: 0.85,
+  lz: -9,
+  fov: 30,
 };
 
 const SHOTS = [
   { t: 0, ...HERO },
   {
-    t: 0.2,
-    x: 0.5,
-    y: 2.3,
-    z: 8.4,
-    lx: 0.15,
-    ly: 0.36,
-    lz: -17,
-    fov: 36,
-    sunY: 0.086,
+    t: 0.28,
+    x: 0.35,
+    y: 4.35,
+    z: 11.2,
+    lx: -0.2,
+    ly: 0.05,
+    lz: -14,
+    fov: 43,
+    sunY: 0.9,
     night: 0.04,
   },
   {
-    t: 0.42,
-    x: -1.15,
-    y: 2.85,
-    z: 10,
-    lx: -0.45,
-    ly: 0.22,
-    lz: -15,
-    fov: 38,
-    sunY: 0.06,
+    t: 0.55,
+    x: -0.15,
+    y: 4.7,
+    z: 12.2,
+    lx: 0.15,
+    ly: -0.05,
+    lz: -13,
+    fov: 44,
+    sunY: 0.82,
     night: 0.16,
   },
   {
-    t: 0.66,
-    x: 1.35,
-    y: 3.45,
-    z: 11.2,
-    lx: 1.2,
-    ly: 0.08,
-    lz: -13,
-    fov: 40,
-    sunY: 0.02,
+    t: 0.78,
+    x: 0.2,
+    y: 5.15,
+    z: 13,
+    lx: -0.05,
+    ly: -0.2,
+    lz: -12,
+    fov: 42,
+    sunY: 0.7,
     night: 0.4,
   },
   {
-    t: 0.86,
-    x: 0.1,
-    y: 4.25,
-    z: 12.4,
-    lx: 0.15,
-    ly: -0.08,
-    lz: -12,
-    fov: 42,
-    sunY: -0.02,
-    night: 0.68,
-  },
-  {
     t: 1,
-    x: -0.25,
-    y: 5.05,
-    z: 13.2,
-    lx: -0.1,
-    ly: -0.28,
-    lz: -10,
-    fov: 38,
-    sunY: -0.09,
-    night: 0.9,
+    x: -0.1,
+    y: 5.6,
+    z: 13.6,
+    lx: 0.05,
+    ly: -0.35,
+    lz: -11,
+    fov: 40,
+    sunY: 0.55,
+    night: 0.78,
   },
 ];
 
@@ -130,41 +117,33 @@ vec3 skyColor(vec3 dir, vec3 sunDir, float night) {
   vec3 s = normalize(sunDir);
   float elev = s.y;
 
-  vec3 zenithDusk = vec3(0.05, 0.055, 0.13);
-  vec3 zenithNight = vec3(0.008, 0.012, 0.028);
-  vec3 zenith = mix(zenithDusk, zenithNight, night);
+  vec3 zenithDay = vec3(0.07, 0.11, 0.18);
+  vec3 zenithNight = vec3(0.012, 0.02, 0.04);
+  vec3 zenith = mix(zenithDay, zenithNight, night);
 
-  vec3 horDusk = vec3(0.62, 0.34, 0.24);
-  vec3 horNight = vec3(0.05, 0.07, 0.11);
-  vec3 horizon = mix(horDusk, horNight, night);
+  vec3 horDay = vec3(0.42, 0.52, 0.6);
+  vec3 horNight = vec3(0.05, 0.08, 0.12);
+  vec3 horizon = mix(horDay, horNight, night);
 
   vec2 xz = normalize(n.xz + vec2(0.0001));
   vec2 sxz = normalize(s.xz + vec2(0.0001));
-  float sunSide = pow(max(dot(xz, sxz), 0.0), 2.2);
-  horizon = mix(horizon, vec3(0.86, 0.48, 0.28), sunSide * (1.0 - night) * 0.7);
+  float sunSide = pow(max(dot(xz, sxz), 0.0), 2.4);
+  horizon = mix(horizon, vec3(0.62, 0.7, 0.76), sunSide * (1.0 - night) * 0.45);
 
   float h = n.y;
-  vec3 col = mix(horizon, zenith, smoothstep(0.0, 0.5, pow(max(h, 0.0), 0.6)));
+  vec3 col = mix(horizon, zenith, smoothstep(0.0, 0.55, pow(max(h, 0.0), 0.65)));
   float below = smoothstep(0.02, -0.35, h);
-  col = mix(col, mix(horizon * 0.22, zenith * 0.35, below), below);
+  col = mix(col, mix(vec3(0.04, 0.07, 0.11), zenith, below), below);
 
-  float band = exp(-pow((h - 0.0) * 18.0, 2.0));
-  col += vec3(0.72, 0.4, 0.26) * band * 0.16 * (1.0 - night);
+  float band = exp(-pow((h - 0.02) * 16.0, 2.0));
+  col += vec3(0.55, 0.64, 0.72) * band * 0.12 * (1.0 - night);
 
-  float sunVis = smoothstep(-0.12, 0.08, elev) * (1.0 - night);
+  float sunVis = smoothstep(-0.05, 0.25, elev) * (1.0 - night * 0.85);
   float sunDot = max(dot(n, s), 0.0);
-  float glow = pow(sunDot, 36.0);
-  float aura = pow(sunDot, 140.0);
-  float disc = smoothstep(0.9995, 0.99982, sunDot);
-  col += vec3(1.0, 0.72, 0.42) * glow * 0.55 * sunVis;
-  col += vec3(2.2, 1.45, 0.7) * aura * sunVis;
-  col += vec3(5.5, 4.6, 3.2) * disc * sunVis;
-
-  float ang = atan(n.y - s.y, n.x - s.x);
-  float streak = pow(0.5 + 0.5 * sin(ang * 6.0 + uTime * 0.08), 14.0);
-  float shaft = pow(sunDot, 8.0) * (0.4 + 0.6 * streak);
-  shaft *= smoothstep(0.0, 0.28, h);
-  col += vec3(0.9, 0.42, 0.18) * shaft * 0.32 * sunVis;
+  float glow = pow(sunDot, 12.0);
+  float disc = smoothstep(0.998, 0.9994, sunDot);
+  col += vec3(0.55, 0.64, 0.72) * glow * 0.28 * sunVis;
+  col += vec3(1.35, 1.5, 1.65) * disc * sunVis;
 
   vec3 cell = floor(n * 460.0);
   float hs = fract(sin(dot(cell, vec3(127.1, 311.7, 74.7))) * 43758.5453);
@@ -217,10 +196,10 @@ void main() {
   float dist = length(xz0 - cameraPosition.xz);
   float detail = exp(-dist * 0.045);
 
-  applyWave(pos, normal, xz0, vec2(0.97, 0.24), 0.4, 24.0, 0.46, 0.55, 1.0);
-  applyWave(pos, normal, xz0, vec2(0.1, 1.0), 0.18, 13.0, 0.4, 0.72, 1.0);
-  applyWave(pos, normal, xz0, vec2(-0.7, 0.62), 0.08, 6.8, 0.34, 0.95, mix(0.45, 1.0, detail));
-  applyWave(pos, normal, xz0, vec2(0.62, -0.78), 0.028, 3.4, 0.3, 1.15, detail);
+  applyWave(pos, normal, xz0, vec2(0.98, 0.18), 1.05, 20.0, 0.58, 0.95, 1.0);
+  applyWave(pos, normal, xz0, vec2(-0.28, 0.96), 0.62, 12.5, 0.5, 1.15, 1.0);
+  applyWave(pos, normal, xz0, vec2(0.72, -0.62), 0.26, 6.6, 0.42, 1.35, mix(0.5, 1.0, detail));
+  applyWave(pos, normal, xz0, vec2(-0.15, -1.0), 0.09, 3.4, 0.34, 1.55, detail);
 
   vec4 world = modelMatrix * vec4(pos, 1.0);
   vWorld = world.xyz;
@@ -248,33 +227,30 @@ void main() {
   float ndv = clamp(dot(n, view), 0.0, 1.0);
   float fresnel = 0.02 + 0.98 * pow(1.0 - ndv, 5.0);
 
-  vec3 deep = mix(vec3(0.015, 0.04, 0.07), vec3(0.008, 0.014, 0.026), night);
-  vec3 shallow = mix(vec3(0.03, 0.12, 0.15), vec3(0.015, 0.03, 0.045), night);
-  float shade = clamp(dot(n, s), 0.0, 1.0);
-  vec3 water = mix(deep, shallow, 0.08 + shade * 0.7);
+  vec3 deep = mix(vec3(0.012, 0.04, 0.09), vec3(0.008, 0.018, 0.04), night);
+  vec3 shallow = mix(vec3(0.05, 0.14, 0.22), vec3(0.02, 0.05, 0.09), night);
+  float shade = clamp(dot(n, s) * 0.5 + 0.5, 0.0, 1.0);
+  vec3 water = mix(deep, shallow, 0.15 + shade * 0.55);
 
   vec3 refl = reflect(I, n);
   vec3 reflected = skyColor(refl, s, night);
-  vec3 col = mix(water, reflected, fresnel);
-
-  float wrap = pow(clamp(dot(view, s), 0.0, 1.0), 3.0);
-  col += vec3(0.85, 0.38, 0.16) * wrap * (1.0 - ndv) * 0.18 * sunVis;
+  float dist = length(cameraPosition - vWorld);
+  vec3 col = mix(water, reflected, fresnel * mix(0.42, 0.88, smoothstep(6.0, 36.0, dist)));
 
   vec3 H = normalize(s + view);
-  float spec = pow(clamp(dot(n, H), 0.0, 1.0), 280.0);
-  float path = pow(clamp(dot(n, H), 0.0, 1.0), 14.0);
-  col += vec3(2.4, 1.7, 1.05) * spec * sunVis;
-  col += vec3(0.95, 0.55, 0.28) * path * 0.2 * sunVis;
+  float spec = pow(clamp(dot(n, H), 0.0, 1.0), 90.0);
+  col += vec3(0.75, 0.84, 0.92) * spec * 1.15 * sunVis;
 
-  float crest = smoothstep(0.22, 0.55, vHeight);
-  col = mix(col, vec3(0.78, 0.74, 0.68), crest * fresnel * 0.22);
+  float crest = smoothstep(0.28, 0.9, vHeight);
+  float chop = smoothstep(0.28, 0.72, 1.0 - n.y);
+  float foam = clamp(crest * 0.75 + chop * 0.55, 0.0, 1.0);
+  col = mix(col, vec3(0.82, 0.88, 0.92), foam * 0.82);
 
   vec3 hor = normalize(vec3(view.x, 0.06, view.z));
   vec3 fogCol = skyColor(hor, s, night);
-  float dist = length(cameraPosition - vWorld);
-  float distFog = 1.0 - exp(-dist * (0.012 + night * 0.01));
-  float graze = pow(1.0 - clamp(view.y, 0.0, 1.0), 3.4);
-  float fog = clamp(max(distFog, graze * 0.72), 0.0, 1.0);
+  float distFog = 1.0 - exp(-dist * (0.01 + night * 0.012));
+  float graze = pow(1.0 - clamp(view.y, 0.0, 1.0), 5.0);
+  float fog = clamp(max(distFog * 0.8, graze * 0.4), 0.0, 1.0);
   col = mix(col, fogCol, fog);
 
   col = grade(col);
@@ -337,7 +313,7 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
   renderer.setClearColor(CLEAR, 1);
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.toneMapping = ACESFilmicToneMapping;
-  renderer.toneMappingExposure = reducedMotion ? 0.98 : 0.5;
+  renderer.toneMappingExposure = reducedMotion ? 1.05 : 0.55;
 
   const scene = new Scene();
   const camera = new PerspectiveCamera(HERO.fov, 1, 0.1, 1400);
@@ -363,7 +339,7 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
   sky.frustumCulled = false;
   sky.renderOrder = -1;
 
-  const segments = mobile ? 72 : 140;
+  const segments = mobile ? 96 : 168;
   const ocean = new Mesh(
     new PlaneGeometry(190, 190, segments, segments),
     new ShaderMaterial({
@@ -399,7 +375,7 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
     composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, camera));
     if (bloomOn) {
-      bloomPass = new UnrealBloomPass(new Vector2(1, 1), 0.16, 0.42, 1.15);
+      bloomPass = new UnrealBloomPass(new Vector2(1, 1), 0.1, 0.35, 1.35);
       composer.addPass(bloomPass);
     }
     composer.addPass(new OutputPass());
@@ -409,7 +385,7 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
   }
 
   const applySun = (sunY) => {
-    sun.set(0.2, sunY, -1).normalize();
+    sun.set(0.28, sunY, -0.42).normalize();
   };
 
   const applyRig = (shot, driftX = 0, driftY = 0, lookX = 0, lookY = 0) => {
@@ -561,7 +537,7 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
         },
         0,
       );
-      tl.to(grade, { exposure: 0.98, duration: 3.15, ease: "power2.out" }, 0.25);
+      tl.to(grade, { exposure: 1.05, duration: 3.15, ease: "power2.out" }, 0.25);
     });
   };
 
