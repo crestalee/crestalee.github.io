@@ -1,7 +1,7 @@
-/** Identity used by the header, footer, and mailto link. */
+/** Identity used by the header, the closing note, and the mailto link. */
 export const site = {
-  name: "CRESTALEE",
-  mark: "CRESTALEE®",
+  name: "Cresta Lee",
+  mark: "Cresta Lee",
   github: "https://github.com/crestalee",
   email: "crestalee@qq.com",
   year: new Date().getFullYear(),

@@ -1,7 +1,7 @@
 import { computed, ref } from "vue";
 import { copy } from "../data/copy.js";
 
-/** Shared across header, hero, work, about, footer. */
+/** Shared across the header, the title card, the work, and the closing note. */
 const STORAGE = "crestalee-lang";
 const locale = ref("en");
 

@@ -1,41 +1,38 @@
 <template>
   <div class="site">
     <SpaceCanvas />
-    <SiteFrame />
+    <div class="shade-top" aria-hidden="true" />
+    <div class="letterbox is-top" aria-hidden="true" />
+    <div class="letterbox is-bottom" aria-hidden="true" />
     <SiteHeader />
     <main>
       <HeroSection />
       <WorkSection />
-      <StackSection />
-      <AboutSection />
+      <CloseSection />
     </main>
-    <SiteFooter />
-    <CommandPalette />
   </div>
 </template>
 
 <script setup>
-/** Page order: canvas → frame → header → hero / work / stack / about → footer → command palette. */
 import { onMounted, onUnmounted } from "vue";
 import SpaceCanvas from "./components/SpaceCanvas.vue";
-import SiteFrame from "./components/SiteFrame.vue";
 import SiteHeader from "./components/SiteHeader.vue";
 import HeroSection from "./components/HeroSection.vue";
 import WorkSection from "./components/WorkSection.vue";
-import StackSection from "./components/StackSection.vue";
-import AboutSection from "./components/AboutSection.vue";
-import SiteFooter from "./components/SiteFooter.vue";
-import CommandPalette from "./components/CommandPalette.vue";
-import { revealSections, startSmoothScroll } from "./composables/useSmoothScroll.js";
+import CloseSection from "./components/CloseSection.vue";
+import { startSmoothScroll } from "./composables/useSmoothScroll.js";
+import { bindFilmMotion } from "./composables/useFilmMotion.js";
 
 let scroll = null;
+let unbind = null;
 
 onMounted(() => {
   scroll = startSmoothScroll();
-  revealSections(document.querySelector(".site"));
+  unbind = bindFilmMotion();
 });
 
 onUnmounted(() => {
+  unbind?.();
   scroll?.destroy();
 });
 </script>

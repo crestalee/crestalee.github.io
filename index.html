@@ -3,42 +3,68 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#010104" />
+    <meta name="theme-color" content="#07060c" />
     <meta
       name="description"
-      content="Personal portfolio and engineering showcase of CRESTALEE. Creative WebGL experiences, frontend architecture, and full-stack software development."
+      content="A personal site by Cresta Lee. An ocean at dusk, and three pieces of software: Parallel Life, Moyu Reader, and this page."
     />
-    <meta name="author" content="crestalee" />
+    <meta name="author" content="Cresta Lee" />
     <link rel="canonical" href="https://crestalee.github.io" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="CRESTALEE® — Digital Craftsman & Engineering" />
+    <meta property="og:title" content="Cresta Lee" />
     <meta
       property="og:description"
-      content="Personal portfolio and engineering showcase of CRESTALEE. Creative WebGL experiences, frontend architecture, and full-stack software development."
+      content="A personal site by Cresta Lee. An ocean at dusk, and three pieces of software: Parallel Life, Moyu Reader, and this page."
     />
     <meta property="og:url" content="https://crestalee.github.io" />
-    <meta property="og:image" content="https://crestalee.github.io/og-image.png" />
+    <meta property="og:image" content="https://crestalee.github.io/og-image.jpg" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="CRESTALEE® — Digital Craftsman & Engineering" />
+    <meta name="twitter:title" content="Cresta Lee" />
     <meta
       name="twitter:description"
-      content="Personal portfolio and engineering showcase of CRESTALEE. Creative WebGL experiences, frontend architecture, and full-stack software development."
+      content="A personal site by Cresta Lee. An ocean at dusk, and three pieces of software: Parallel Life, Moyu Reader, and this page."
     />
-    <meta name="twitter:image" content="https://crestalee.github.io/og-image.png" />
-    <title>CRESTALEE® — Digital Craftsman & Engineering</title>
+    <meta name="twitter:image" content="https://crestalee.github.io/og-image.jpg" />
+    <title>Cresta Lee</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script>
+      (function () {
+        try {
+          if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+          document.documentElement.classList.add("is-intro");
+        } catch (e) {}
+      })();
+    </script>
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "Person",
-        "name": "CRESTALEE",
+        "name": "Cresta Lee",
         "url": "https://crestalee.github.io",
+        "email": "mailto:crestalee@qq.com",
+        "homeLocation": "Shanghai",
         "sameAs": ["https://github.com/crestalee"]
       }
     </script>
   </head>
   <body>
     <div id="app"></div>
+    <noscript>
+      <style>
+        html.is-intro,
+        html.is-intro body {
+          overflow: auto !important;
+        }
+        html.is-intro .header,
+        html.is-intro .hero-copy,
+        html.is-intro .scroll-cue {
+          opacity: 1 !important;
+        }
+        html.is-intro .letterbox {
+          height: 0 !important;
+        }
+      </style>
+    </noscript>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
