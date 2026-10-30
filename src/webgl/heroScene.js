@@ -1,19 +1,13 @@
 import {
   ACESFilmicToneMapping,
-  BufferAttribute,
-  BufferGeometry,
+  BackSide,
   Clock,
-  EllipseCurve,
-  Group,
-  Line,
-  LineBasicMaterial,
-  LineLoop,
-  LineSegments,
-  MathUtils,
+  Mesh,
   PerspectiveCamera,
-  Points,
-  PointsMaterial,
+  PlaneGeometry,
   Scene,
+  ShaderMaterial,
+  SphereGeometry,
   SRGBColorSpace,
   Vector2,
   Vector3,
@@ -21,603 +15,539 @@ import {
 } from "three";
 import gsap from "gsap";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 
 /**
- * Full-page WebGL backdrop.
+ * One shot: a camera among rolling storm waves.
  *
- * No hero object. The picture is a drifting starfield plus a few orbital
- * paths. Intro is a short warp (stretched stars, camera rushing in), then
- * the field keeps moving with the pointer and the page scroll.
- * `prefers-reduced-motion` skips the warp and freezes the ornaments.
+ * Light stays cold. Scroll only deepens the blue; it does not turn the
+ * sea gold. `prefers-reduced-motion` renders a single still.
  */
-const BG = 0x010104;
 
-function makeStars(count, radiusMin, radiusMax, band = false) {
-  const positions = new Float32Array(count * 3);
-  const colors = new Float32Array(count * 3);
-  for (let i = 0; i < count; i += 1) {
-    const theta = Math.random() * Math.PI * 2;
-    const phi = band
-      ? Math.PI / 2 + (Math.random() - 0.5) * 0.38
-      : Math.acos(2 * Math.random() - 1);
-    const radius = radiusMin + Math.random() * (radiusMax - radiusMin);
-    positions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
-    positions[i * 3 + 1] = radius * Math.cos(phi);
-    positions[i * 3 + 2] = radius * Math.sin(phi) * Math.sin(theta);
-    const shade = 0.72 + Math.random() * 0.28;
-    colors[i * 3] = shade;
-    colors[i * 3 + 1] = shade;
-    colors[i * 3 + 2] = Math.min(1, shade + 0.04);
+const CLEAR = 0x0b1218;
+
+/** Hero frame the intro lands on. Later beats ease away from this. */
+const HERO = {
+  x: 0.15,
+  y: 4.15,
+  z: 10.4,
+  lx: -0.55,
+  ly: 0.15,
+  lz: -14,
+  fov: 42,
+  sunY: 0.95,
+  night: 0,
+};
+
+/** Opener: lower, tighter, already inside the swell. */
+const INTRO_FROM = {
+  x: 0.85,
+  y: 3.25,
+  z: 6.6,
+  lx: -1.4,
+  ly: 0.85,
+  lz: -9,
+  fov: 30,
+};
+
+const SHOTS = [
+  { t: 0, ...HERO },
+  {
+    t: 0.28,
+    x: 0.35,
+    y: 4.35,
+    z: 11.2,
+    lx: -0.2,
+    ly: 0.05,
+    lz: -14,
+    fov: 43,
+    sunY: 0.9,
+    night: 0.04,
+  },
+  {
+    t: 0.55,
+    x: -0.15,
+    y: 4.7,
+    z: 12.2,
+    lx: 0.15,
+    ly: -0.05,
+    lz: -13,
+    fov: 44,
+    sunY: 0.82,
+    night: 0.16,
+  },
+  {
+    t: 0.78,
+    x: 0.2,
+    y: 5.15,
+    z: 13,
+    lx: -0.05,
+    ly: -0.2,
+    lz: -12,
+    fov: 42,
+    sunY: 0.7,
+    night: 0.4,
+  },
+  {
+    t: 1,
+    x: -0.1,
+    y: 5.6,
+    z: 13.6,
+    lx: 0.05,
+    ly: -0.35,
+    lz: -11,
+    fov: 40,
+    sunY: 0.55,
+    night: 0.78,
+  },
+];
+
+const SHARED = /* glsl */ `
+precision highp float;
+
+uniform float uTime;
+uniform float uNight;
+uniform vec3 uSunDir;
+uniform vec2 uResolution;
+
+vec3 skyColor(vec3 dir, vec3 sunDir, float night) {
+  vec3 n = normalize(dir);
+  vec3 s = normalize(sunDir);
+  float elev = s.y;
+
+  vec3 zenithDay = vec3(0.07, 0.11, 0.18);
+  vec3 zenithNight = vec3(0.012, 0.02, 0.04);
+  vec3 zenith = mix(zenithDay, zenithNight, night);
+
+  vec3 horDay = vec3(0.42, 0.52, 0.6);
+  vec3 horNight = vec3(0.05, 0.08, 0.12);
+  vec3 horizon = mix(horDay, horNight, night);
+
+  vec2 xz = normalize(n.xz + vec2(0.0001));
+  vec2 sxz = normalize(s.xz + vec2(0.0001));
+  float sunSide = pow(max(dot(xz, sxz), 0.0), 2.4);
+  horizon = mix(horizon, vec3(0.62, 0.7, 0.76), sunSide * (1.0 - night) * 0.45);
+
+  float h = n.y;
+  vec3 col = mix(horizon, zenith, smoothstep(0.0, 0.55, pow(max(h, 0.0), 0.65)));
+  float below = smoothstep(0.02, -0.35, h);
+  col = mix(col, mix(vec3(0.04, 0.07, 0.11), zenith, below), below);
+
+  float band = exp(-pow((h - 0.02) * 16.0, 2.0));
+  col += vec3(0.55, 0.64, 0.72) * band * 0.12 * (1.0 - night);
+
+  float sunVis = smoothstep(-0.05, 0.25, elev) * (1.0 - night * 0.85);
+  float sunDot = max(dot(n, s), 0.0);
+  float glow = pow(sunDot, 12.0);
+  float disc = smoothstep(0.998, 0.9994, sunDot);
+  col += vec3(0.55, 0.64, 0.72) * glow * 0.28 * sunVis;
+  col += vec3(1.35, 1.5, 1.65) * disc * sunVis;
+
+  vec3 cell = floor(n * 460.0);
+  float hs = fract(sin(dot(cell, vec3(127.1, 311.7, 74.7))) * 43758.5453);
+  float star = step(0.9984, hs);
+  float tw = 0.72 + 0.28 * sin(uTime * 0.45 + hs * 38.0);
+  col += vec3(0.9, 0.94, 1.0) * star * tw * 1.35 * smoothstep(0.22, 0.7, night) * smoothstep(0.04, 0.22, h);
+
+  return col;
+}
+
+vec3 grade(vec3 col) {
+  vec2 uv = gl_FragCoord.xy / max(uResolution, vec2(1.0));
+  vec2 p = (uv - 0.5) * vec2(uResolution.x / max(uResolution.y, 1.0), 1.0);
+  float vig = smoothstep(1.2, 0.32, length(p));
+  col *= mix(0.58, 1.0, vig);
+  float g = fract(sin(dot(gl_FragCoord.xy + vec2(uTime * 13.0, uTime * 7.0), vec2(12.9898, 78.233))) * 43758.5453);
+  col += (g - 0.5) * 0.022;
+  return col;
+}
+`;
+
+const OCEAN_VERT = /* glsl */ `
+precision highp float;
+
+uniform float uTime;
+varying vec3 vWorld;
+varying vec3 vNormal;
+varying float vHeight;
+
+void applyWave(inout vec3 pos, inout vec3 normal, vec2 xz0, vec2 dir, float amp, float length, float steep, float speed, float fade) {
+  float a = amp * fade;
+  vec2 d = normalize(dir);
+  float w = 6.28318530718 / length;
+  float phase = w * dot(d, xz0) - uTime * speed * w;
+  float s = sin(phase);
+  float c = cos(phase);
+  pos.x += steep * a * d.x * c;
+  pos.z += steep * a * d.y * c;
+  pos.y += a * s;
+  float wa = w * a;
+  normal.x -= d.x * wa * c;
+  normal.z -= d.y * wa * c;
+  normal.y -= steep * wa * s;
+}
+
+void main() {
+  vec3 pos = position;
+  vec2 xz0 = position.xz;
+  vec3 normal = vec3(0.0, 1.0, 0.0);
+  float dist = length(xz0 - cameraPosition.xz);
+  float detail = exp(-dist * 0.045);
+
+  applyWave(pos, normal, xz0, vec2(0.98, 0.18), 1.05, 20.0, 0.58, 0.95, 1.0);
+  applyWave(pos, normal, xz0, vec2(-0.28, 0.96), 0.62, 12.5, 0.5, 1.15, 1.0);
+  applyWave(pos, normal, xz0, vec2(0.72, -0.62), 0.26, 6.6, 0.42, 1.35, mix(0.5, 1.0, detail));
+  applyWave(pos, normal, xz0, vec2(-0.15, -1.0), 0.09, 3.4, 0.34, 1.55, detail);
+
+  vec4 world = modelMatrix * vec4(pos, 1.0);
+  vWorld = world.xyz;
+  vNormal = normalize(mat3(modelMatrix) * normal);
+  vHeight = pos.y;
+  gl_Position = projectionMatrix * viewMatrix * world;
+}
+`;
+
+const OCEAN_FRAG = /* glsl */ `
+${SHARED}
+
+varying vec3 vWorld;
+varying vec3 vNormal;
+varying float vHeight;
+
+void main() {
+  vec3 n = normalize(vNormal);
+  vec3 s = normalize(uSunDir);
+  vec3 view = normalize(cameraPosition - vWorld);
+  vec3 I = -view;
+  float night = uNight;
+  float sunVis = smoothstep(-0.14, 0.06, s.y) * (1.0 - night);
+
+  float ndv = clamp(dot(n, view), 0.0, 1.0);
+  float fresnel = 0.02 + 0.98 * pow(1.0 - ndv, 5.0);
+
+  vec3 deep = mix(vec3(0.012, 0.04, 0.09), vec3(0.008, 0.018, 0.04), night);
+  vec3 shallow = mix(vec3(0.05, 0.14, 0.22), vec3(0.02, 0.05, 0.09), night);
+  float shade = clamp(dot(n, s) * 0.5 + 0.5, 0.0, 1.0);
+  vec3 water = mix(deep, shallow, 0.15 + shade * 0.55);
+
+  vec3 refl = reflect(I, n);
+  vec3 reflected = skyColor(refl, s, night);
+  float dist = length(cameraPosition - vWorld);
+  vec3 col = mix(water, reflected, fresnel * mix(0.42, 0.88, smoothstep(6.0, 36.0, dist)));
+
+  vec3 H = normalize(s + view);
+  float spec = pow(clamp(dot(n, H), 0.0, 1.0), 90.0);
+  col += vec3(0.75, 0.84, 0.92) * spec * 1.15 * sunVis;
+
+  float crest = smoothstep(0.28, 0.9, vHeight);
+  float chop = smoothstep(0.28, 0.72, 1.0 - n.y);
+  float foam = clamp(crest * 0.75 + chop * 0.55, 0.0, 1.0);
+  col = mix(col, vec3(0.82, 0.88, 0.92), foam * 0.82);
+
+  vec3 hor = normalize(vec3(view.x, 0.06, view.z));
+  vec3 fogCol = skyColor(hor, s, night);
+  float distFog = 1.0 - exp(-dist * (0.01 + night * 0.012));
+  float graze = pow(1.0 - clamp(view.y, 0.0, 1.0), 5.0);
+  float fog = clamp(max(distFog * 0.8, graze * 0.4), 0.0, 1.0);
+  col = mix(col, fogCol, fog);
+
+  col = grade(col);
+  gl_FragColor = vec4(col, 1.0);
+}
+`;
+
+const SKY_VERT = /* glsl */ `
+varying vec3 vDir;
+void main() {
+  vec4 world = modelMatrix * vec4(position, 1.0);
+  vDir = world.xyz - cameraPosition;
+  gl_Position = projectionMatrix * viewMatrix * world;
+}
+`;
+
+const SKY_FRAG = /* glsl */ `
+${SHARED}
+varying vec3 vDir;
+void main() {
+  vec3 col = grade(skyColor(normalize(vDir), uSunDir, uNight));
+  gl_FragColor = vec4(col, 1.0);
+}
+`;
+
+function sampleShot(t) {
+  const time = Math.min(Math.max(t, 0), 1);
+  if (time <= SHOTS[0].t) return SHOTS[0];
+  for (let i = 0; i < SHOTS.length - 1; i += 1) {
+    const a = SHOTS[i];
+    const b = SHOTS[i + 1];
+    if (time > b.t) continue;
+    const u = (time - a.t) / (b.t - a.t);
+    const s = u * u * (3 - 2 * u);
+    const out = { t: time };
+    Object.keys(HERO).forEach((key) => {
+      out[key] = a[key] + (b[key] - a[key]) * s;
+    });
+    return out;
   }
-  const geometry = new BufferGeometry();
-  geometry.setAttribute("position", new BufferAttribute(positions, 3));
-  geometry.setAttribute("color", new BufferAttribute(colors, 3));
-  return geometry;
-}
-
-function starMaterial(size, attenuation = false) {
-  return new PointsMaterial({
-    size,
-    sizeAttenuation: attenuation,
-    vertexColors: true,
-    transparent: true,
-    opacity: 0.95,
-    depthWrite: false,
-  });
-}
-
-function lineMaterial(opacity, vertexColors = false) {
-  return new LineBasicMaterial({
-    color: 0xd5dae2,
-    vertexColors,
-    transparent: true,
-    opacity,
-    depthWrite: false,
-  });
-}
-
-/** Sparse ticks in the far sphere. They lean toward the pointer. */
-function createFieldTicks(count, radiusMin, radiusMax) {
-  const centers = new Float32Array(count * 3);
-  for (let i = 0; i < count; i += 1) {
-    const theta = Math.random() * Math.PI * 2;
-    const phi = Math.acos(2 * Math.random() - 1);
-    const radius = radiusMin + Math.random() * (radiusMax - radiusMin);
-    centers[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
-    centers[i * 3 + 1] = radius * Math.cos(phi);
-    centers[i * 3 + 2] = radius * Math.sin(phi) * Math.sin(theta);
-  }
-  const positions = new Float32Array(count * 6);
-  const colors = new Float32Array(count * 6);
-  const geometry = new BufferGeometry();
-  geometry.setAttribute("position", new BufferAttribute(positions, 3));
-  geometry.setAttribute("color", new BufferAttribute(colors, 3));
-  const mesh = new LineSegments(geometry, lineMaterial(0.2, true));
-  return { mesh, centers, positions, colors, geometry };
-}
-
-/** Large ellipses sitting in the sky, not around a planet. */
-function createOrbits() {
-  const paths = [
-    { rx: 16, rz: 5.8, rotX: 0.68, rotZ: 0.2, opacity: 0.13, speed: 0.045 },
-    { rx: 21.5, rz: 7.4, rotX: 0.4, rotZ: -0.28, opacity: 0.08, speed: 0.03 },
-    { rx: 12.8, rz: 10.2, rotX: 1.04, rotZ: 0.1, opacity: 0.1, speed: 0.055 },
-    { rx: 26, rz: 8.6, rotX: 0.22, rotZ: 0.5, opacity: 0.06, speed: 0.022 },
-  ];
-  const group = new Group();
-  paths.forEach((path) => {
-    const hold = new Group();
-    hold.rotation.set(path.rotX, 0, path.rotZ);
-    const curve = new EllipseCurve(0, 0, path.rx, path.rz, 0, Math.PI * 2, false, 0);
-    const points = curve.getPoints(160).map((point) => new Vector3(point.x, 0, point.y));
-    const mesh = new LineLoop(
-      new BufferGeometry().setFromPoints(points),
-      lineMaterial(path.opacity),
-    );
-    mesh.material.color.setHex(0xb4bcc8);
-    hold.add(mesh);
-    group.add(hold);
-  });
-
-  const dustCount = paths.length * 3;
-  const dustPositions = new Float32Array(dustCount * 3);
-  const dustGeometry = new BufferGeometry();
-  dustGeometry.setAttribute("position", new BufferAttribute(dustPositions, 3));
-  const dust = new Points(
-    dustGeometry,
-    new PointsMaterial({
-      color: 0xd7dbe3,
-      size: 0.09,
-      sizeAttenuation: true,
-      transparent: true,
-      opacity: 0.7,
-      depthWrite: false,
-    }),
-  );
-  group.add(dust);
-  return { group, dust, dustPositions, dustGeometry, paths };
-}
-
-/** Constellation segments, filled each frame from nearby bright stars. */
-function createTraceLines(maxPairs) {
-  const positions = new Float32Array(maxPairs * 6);
-  const geometry = new BufferGeometry();
-  geometry.setAttribute("position", new BufferAttribute(positions, 3));
-  geometry.setDrawRange(0, 0);
-  const mesh = new LineSegments(geometry, lineMaterial(0.16));
-  mesh.material.color.setHex(0x9aa8c2);
-  return { mesh, positions, geometry, maxPairs };
-}
-
-/** A faint horizon line that breathes with time and pointer. */
-function createSignalArc(count) {
-  const positions = new Float32Array(count * 3);
-  const geometry = new BufferGeometry();
-  geometry.setAttribute("position", new BufferAttribute(positions, 3));
-  const mesh = new Line(geometry, lineMaterial(0.08));
-  mesh.material.color.setHex(0x8b93a3);
-  const energy = new Float32Array(count);
-  return { mesh, positions, geometry, energy, count };
+  return SHOTS[SHOTS.length - 1];
 }
 
 export function createHeroScene(canvas, { reducedMotion = false } = {}) {
-  const mobile = window.matchMedia("(max-width: 720px)").matches;
-  const dpr = Math.min(window.devicePixelRatio || 1, mobile ? 1.15 : 1.6);
+  const mobile = window.matchMedia("(max-width: 760px)").matches;
+  const saveData = navigator.connection?.saveData === true;
+  let pixelRatio = Math.min(window.devicePixelRatio || 1, mobile ? 1.15 : 1.35);
 
   const renderer = new WebGLRenderer({
     canvas,
-    antialias: !mobile,
+    antialias: false,
     alpha: false,
     powerPreference: "high-performance",
   });
-  renderer.setPixelRatio(dpr);
-  renderer.setClearColor(BG, 1);
-  renderer.toneMapping = ACESFilmicToneMapping;
-  renderer.toneMappingExposure = reducedMotion ? 1.05 : 0.06;
+  if (!renderer.getContext()) {
+    renderer.dispose();
+    throw new Error("WebGL unavailable");
+  }
+  renderer.setPixelRatio(pixelRatio);
+  renderer.setClearColor(CLEAR, 1);
   renderer.outputColorSpace = SRGBColorSpace;
+  renderer.toneMapping = ACESFilmicToneMapping;
+  renderer.toneMappingExposure = reducedMotion ? 1.05 : 0.55;
 
   const scene = new Scene();
-  const startZ = reducedMotion ? 6.2 : mobile ? 28 : 42;
-  const startFov = reducedMotion ? 48 : mobile ? 22 : 16;
-  const camera = new PerspectiveCamera(startFov, 1, 0.08, 240);
-  camera.position.set(
-    reducedMotion || mobile ? 0 : -4.8,
-    reducedMotion ? 0.2 : mobile ? 1.1 : 1.7,
-    startZ,
-  );
+  const camera = new PerspectiveCamera(HERO.fov, 1, 0.1, 1400);
+  const sun = new Vector3();
 
-  const warpStars = !reducedMotion;
-  const stars = new Points(
-    makeStars(mobile ? 2400 : 6800, 16, 58),
-    starMaterial(warpStars ? (mobile ? 0.055 : 0.08) : 1.05, warpStars),
-  );
-  const bright = new Points(
-    makeStars(mobile ? 90 : 200, 18, 50),
-    starMaterial(warpStars ? (mobile ? 0.11 : 0.16) : 1.8, warpStars),
-  );
-  const milky = new Points(
-    makeStars(mobile ? 1000 : 2600, 20, 48, true),
-    starMaterial(warpStars ? (mobile ? 0.05 : 0.075) : 1.05, warpStars),
-  );
-  milky.rotation.z = 0.55;
-  const starField = new Group();
-  starField.add(stars, bright, milky);
-  if (warpStars) starField.scale.set(1, 1, 4.8);
-  scene.add(starField);
+  const uniforms = {
+    uTime: { value: reducedMotion ? 16 : 0 },
+    uNight: { value: 0 },
+    uSunDir: { value: sun },
+    uResolution: { value: new Vector2(1, 1) },
+  };
 
-  const field = createFieldTicks(mobile ? 90 : 180, 18, 48);
-  const orbits = createOrbits();
-  const trace = createTraceLines(mobile ? 28 : 48);
-  const signal = createSignalArc(mobile ? 56 : 88);
-  scene.add(field.mesh, orbits.group, trace.mesh, signal.mesh);
-
-  const atmos = { fade: reducedMotion ? 0.75 : 0 };
-  field.mesh.material.opacity = 0;
-  orbits.group.children.forEach((child) => {
-    if (child.material) child.material.opacity = 0;
-    child.children?.forEach((line) => {
-      if (line.material) line.material.opacity = 0;
-    });
-  });
-  trace.mesh.material.opacity = 0;
-  signal.mesh.material.opacity = 0;
-
-  const _attractor = new Vector3();
-  const _center = new Vector3();
-  const _screen = new Vector3();
-  const _star = new Vector3();
-  const _dust = new Vector3();
-  const nearStars = [];
-
-  const meteorCount = 16;
-  const meteorPos = new Float32Array(meteorCount * 3);
-  const meteorGeo = new BufferGeometry();
-  meteorGeo.setAttribute("position", new BufferAttribute(meteorPos, 3));
-  const meteor = new Points(
-    meteorGeo,
-    new PointsMaterial({
-      color: 0xe8eef8,
-      size: 1.2,
-      sizeAttenuation: false,
-      transparent: true,
-      opacity: 0,
+  const sky = new Mesh(
+    new SphereGeometry(520, 24, 16),
+    new ShaderMaterial({
+      uniforms,
+      vertexShader: SKY_VERT,
+      fragmentShader: SKY_FRAG,
+      side: BackSide,
       depthWrite: false,
     }),
   );
-  scene.add(meteor);
-  const meteorState = {
-    wait: 3,
-    life: 0,
-    origin: new Vector3(8, 4, -6),
-    dir: new Vector3(-1, -0.35, 0.2),
-  };
+  sky.frustumCulled = false;
+  sky.renderOrder = -1;
 
-  const pointer = { x: 0, y: 0 };
-  const target = { x: 0, y: 0 };
-  const bloom = { strength: 0.12 };
+  const segments = mobile ? 96 : 168;
+  const ocean = new Mesh(
+    new PlaneGeometry(190, 190, segments, segments),
+    new ShaderMaterial({
+      uniforms,
+      vertexShader: OCEAN_VERT,
+      fragmentShader: OCEAN_FRAG,
+    }),
+  );
+  ocean.geometry.rotateX(-Math.PI / 2);
+  ocean.frustumCulled = false;
+  scene.add(sky, ocean);
+
   const rig = {
-    x: camera.position.x,
-    y: camera.position.y,
-    z: camera.position.z,
-    fov: camera.fov,
-    lookY: reducedMotion ? 0.05 : 0.45,
-    starSpin: reducedMotion ? 0.006 : 0.2,
-    pathSpin: reducedMotion ? 0.004 : 0.08,
+    ...INTRO_FROM,
+    sunY: HERO.sunY,
+    night: HERO.night,
   };
+  const grade = { exposure: renderer.toneMappingExposure };
+  const pointer = { x: 0, y: 0 };
+  const pointerTarget = { x: 0, y: 0 };
   let scroll = 0;
   let introLock = !reducedMotion;
-  let running = true;
+  let running = !reducedMotion;
   let raf = 0;
-  let frameCount = 0;
+  let frames = 0;
+  let hotFrames = 0;
   const clock = new Clock();
+
+  const bloomOn = !reducedMotion && !mobile && !saveData;
   let composer = null;
   let bloomPass = null;
-
-  if (!reducedMotion && !mobile) {
+  try {
     composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, camera));
-    bloomPass = new UnrealBloomPass(new Vector2(1, 1), bloom.strength, 0.55, 0.2);
-    composer.addPass(bloomPass);
+    if (bloomOn) {
+      bloomPass = new UnrealBloomPass(new Vector2(1, 1), 0.1, 0.35, 1.35);
+      composer.addPass(bloomPass);
+    }
+    composer.addPass(new OutputPass());
+  } catch (error) {
+    console.error(error);
+    composer = null;
   }
 
-  const onPointer = (event) => {
-    target.x = (event.clientX / window.innerWidth) * 2 - 1;
-    target.y = (event.clientY / window.innerHeight) * 2 - 1;
+  const applySun = (sunY) => {
+    sun.set(0.28, sunY, -0.42).normalize();
+  };
+
+  const applyRig = (shot, driftX = 0, driftY = 0, lookX = 0, lookY = 0) => {
+    const aspect = camera.aspect || 1;
+    const fovBoost = aspect < 1 ? (1 - aspect) * 14 : 0;
+    const lookLift = aspect < 0.85 ? 1.2 : 0;
+    camera.fov = shot.fov + fovBoost;
+    camera.updateProjectionMatrix();
+    camera.position.set(shot.x + driftX, shot.y + driftY, shot.z);
+    camera.lookAt(shot.lx + lookX, shot.ly + lookY + lookLift, shot.lz);
+    applySun(shot.sunY);
+    uniforms.uNight.value = shot.night;
   };
 
   const resize = () => {
     const width = canvas.clientWidth || window.innerWidth;
     const height = canvas.clientHeight || window.innerHeight;
+    renderer.setPixelRatio(pixelRatio);
     renderer.setSize(width, height, false);
-    camera.aspect = width / height;
+    camera.aspect = width / Math.max(height, 1);
     camera.updateProjectionMatrix();
     composer?.setSize(width, height);
-    bloomPass?.setSize(width, height);
+    const buffer = new Vector2();
+    renderer.getDrawingBufferSize(buffer);
+    uniforms.uResolution.value.copy(buffer);
   };
 
-  const setAtmosOpacity = (visible) => {
-    field.mesh.material.opacity = 0.22 * visible;
-    orbits.paths.forEach((path, index) => {
-      const hold = orbits.group.children[index];
-      const line = hold?.children?.[0];
-      if (line?.material) line.material.opacity = path.opacity * visible;
-    });
-    if (orbits.dust.material) orbits.dust.material.opacity = 0.65 * visible;
-    trace.mesh.material.opacity = 0.18 * visible;
-    signal.mesh.material.opacity = 0.09 * visible;
-  };
-
-  const tickField = () => {
-    _attractor.set(pointer.x, pointer.y, 0.62).unproject(camera);
-    const count = field.centers.length / 3;
-    for (let i = 0; i < count; i += 1) {
-      _center.fromArray(field.centers, i * 3);
-      const dx = _attractor.x - _center.x;
-      const dy = _attractor.y - _center.y;
-      const dz = _attractor.z - _center.z;
-      const dist = Math.hypot(dx, dy, dz) || 1;
-      const near = Math.max(0, 1 - dist / 28);
-      const length = 0.28 + near * 0.7;
-      const ox = (dx / dist) * length;
-      const oy = (dy / dist) * length;
-      const oz = (dz / dist) * length;
-      const p = i * 6;
-      field.positions[p] = _center.x - ox;
-      field.positions[p + 1] = _center.y - oy;
-      field.positions[p + 2] = _center.z - oz;
-      field.positions[p + 3] = _center.x + ox;
-      field.positions[p + 4] = _center.y + oy;
-      field.positions[p + 5] = _center.z + oz;
-      const tone = 0.62 + near * 0.28;
-      const cool = near * 0.12;
-      for (let k = 0; k < 2; k += 1) {
-        const c = i * 6 + k * 3;
-        field.colors[c] = tone - cool;
-        field.colors[c + 1] = tone - cool * 0.4;
-        field.colors[c + 2] = Math.min(1, tone + cool);
+  let composerFailed = false;
+  const draw = () => {
+    renderer.toneMappingExposure = grade.exposure;
+    if (composer && !composerFailed) {
+      try {
+        composer.render();
+        return;
+      } catch (error) {
+        console.error(error);
+        composerFailed = true;
       }
     }
-    field.geometry.attributes.position.needsUpdate = true;
-    field.geometry.attributes.color.needsUpdate = true;
+    renderer.render(scene, camera);
   };
 
-  const tickOrbits = (time) => {
-    orbits.group.rotation.y = time * rig.pathSpin;
-    orbits.group.rotation.z = Math.sin(time * 0.07) * 0.04;
-    orbits.paths.forEach((path, index) => {
-      const hold = orbits.group.children[index];
-      if (hold) hold.rotation.y = time * path.speed;
-    });
-    const dustCount = orbits.dustPositions.length / 3;
-    for (let i = 0; i < dustCount; i += 1) {
-      const path = orbits.paths[i % orbits.paths.length];
-      const hold = orbits.group.children[i % orbits.paths.length];
-      const angle = time * (0.12 + (i % 3) * 0.05) + i * 1.7;
-      _dust.set(Math.cos(angle) * path.rx, 0, Math.sin(angle) * path.rz);
-      if (hold) _dust.applyEuler(hold.rotation);
-      orbits.dustPositions[i * 3] = _dust.x;
-      orbits.dustPositions[i * 3 + 1] = _dust.y;
-      orbits.dustPositions[i * 3 + 2] = _dust.z;
-    }
-    orbits.dustGeometry.attributes.position.needsUpdate = true;
+  const onPointer = (event) => {
+    pointerTarget.x = (event.clientX / window.innerWidth) * 2 - 1;
+    pointerTarget.y = (event.clientY / window.innerHeight) * 2 - 1;
   };
 
-  const tickTrace = () => {
-    bright.updateMatrixWorld();
-    const source = bright.geometry.attributes.position;
-    nearStars.length = 0;
-    for (let i = 0; i < source.count; i += 1) {
-      _star.fromBufferAttribute(source, i).applyMatrix4(bright.matrixWorld);
-      _screen.copy(_star).project(camera);
-      if (_screen.z > 1) continue;
-      const dist = Math.hypot(_screen.x - pointer.x, _screen.y - pointer.y);
-      if (dist > 0.4) continue;
-      nearStars.push(_star.x, _star.y, _star.z, dist);
+  const onVisibility = () => {
+    if (document.hidden) {
+      running = false;
+      cancelAnimationFrame(raf);
+      return;
     }
-    let drawn = 0;
-    const reach = 4.8;
-    for (let i = 0; i < nearStars.length; i += 4) {
-      for (let j = i + 4; j < nearStars.length; j += 4) {
-        if (drawn >= trace.maxPairs) break;
-        const span = Math.hypot(
-          nearStars[i] - nearStars[j],
-          nearStars[i + 1] - nearStars[j + 1],
-          nearStars[i + 2] - nearStars[j + 2],
-        );
-        if (span > reach) continue;
-        if ((nearStars[i + 3] + nearStars[j + 3]) * 0.5 > 0.36) continue;
-        const p = drawn * 6;
-        trace.positions[p] = nearStars[i];
-        trace.positions[p + 1] = nearStars[i + 1];
-        trace.positions[p + 2] = nearStars[i + 2];
-        trace.positions[p + 3] = nearStars[j];
-        trace.positions[p + 4] = nearStars[j + 1];
-        trace.positions[p + 5] = nearStars[j + 2];
-        drawn += 1;
-      }
-      if (drawn >= trace.maxPairs) break;
-    }
-    trace.geometry.setDrawRange(0, drawn * 2);
-    trace.geometry.attributes.position.needsUpdate = true;
-  };
-
-  const tickSignal = (time) => {
-    const sweep = (time * 0.04 + pointer.x * 0.16) % 1;
-    const count = signal.count;
-    for (let i = 0; i < count; i += 1) {
-      const t = i / (count - 1);
-      signal.energy[i] *= 0.94;
-      const wave = Math.sin(i * 0.22 + time * 0.7) * 0.12;
-      const pulse = Math.max(0, 1 - Math.abs(t - sweep) * 9);
-      if (pulse > 0.45) signal.energy[i] = Math.max(signal.energy[i], pulse);
-      const lift = 0.05 + (signal.energy[i] + wave) * 0.18;
-      signal.positions[i * 3] = -22 + t * 44;
-      signal.positions[i * 3 + 1] = -3.2 + lift;
-      signal.positions[i * 3 + 2] = -18 + Math.sin(t * Math.PI) * 2.4;
-    }
-    const hover = (pointer.x + 1) * 0.5;
-    const index = Math.max(0, Math.min(count - 1, Math.floor(hover * count)));
-    signal.energy[index] = 1;
-    if (index > 0) signal.energy[index - 1] = Math.max(signal.energy[index - 1], 0.55);
-    if (index < count - 1) signal.energy[index + 1] = Math.max(signal.energy[index + 1], 0.55);
-    signal.geometry.attributes.position.needsUpdate = true;
-  };
-
-  const tickMeteor = (delta) => {
-    meteorState.wait -= delta;
-    if (meteorState.wait < 0 && meteorState.life <= 0) {
-      meteorState.life = 1;
-      meteorState.origin.set(6 + Math.random() * 4, 2 + Math.random() * 3, -8);
-      meteorState.dir.set(-1.2, -0.25 - Math.random() * 0.2, 0.15);
-      meteorState.wait = 5 + Math.random() * 8;
-    }
-    if (meteorState.life > 0) {
-      meteorState.life -= delta * 0.85;
-      meteor.material.opacity = Math.max(0, meteorState.life);
-      for (let i = 0; i < meteorCount; i += 1) {
-        const along = i / meteorCount;
-        meteorPos[i * 3] =
-          meteorState.origin.x +
-          meteorState.dir.x * along * 4.5 +
-          (1 - meteorState.life) * meteorState.dir.x * 10;
-        meteorPos[i * 3 + 1] =
-          meteorState.origin.y +
-          meteorState.dir.y * along * 4.5 +
-          (1 - meteorState.life) * meteorState.dir.y * 10;
-        meteorPos[i * 3 + 2] = meteorState.origin.z + meteorState.dir.z * along * 2;
-      }
-      meteorGeo.attributes.position.needsUpdate = true;
-    } else {
-      meteor.material.opacity = 0;
+    if (!running && !reducedMotion) {
+      running = true;
+      clock.getDelta();
+      tick();
     }
   };
 
   const tick = () => {
     const delta = Math.min(clock.getDelta(), 0.05);
     const time = clock.elapsedTime;
-    pointer.x += (target.x - pointer.x) * 0.04;
-    pointer.y += (target.y - pointer.y) * 0.04;
+    frames += 1;
+    uniforms.uTime.value = time;
 
-    if (!reducedMotion) {
-      stars.rotation.y = time * rig.starSpin;
-      bright.rotation.y = time * rig.starSpin;
-      milky.rotation.y = time * (rig.starSpin + 0.002);
-      milky.rotation.x = Math.sin(time * 0.05) * 0.03;
-      if (!introLock) {
-        starField.position.x = pointer.x * 0.35;
-        starField.position.y = pointer.y * 0.18 - scroll * 1.4;
-        starField.rotation.z = pointer.x * 0.04;
-        orbits.group.position.x = pointer.x * 0.22;
-        orbits.group.position.y = pointer.y * 0.1 - scroll * 0.8;
-      }
-      tickMeteor(delta);
-    }
-
-    const visible = atmos.fade * (0.62 + 0.38 * (1 - MathUtils.smoothstep(scroll, 0.2, 0.75)));
-    setAtmosOpacity(visible);
-    if (!introLock && visible > 0.02 && !reducedMotion) {
-      tickField();
-      tickOrbits(time);
-      if (frameCount % 2 === 0) tickTrace();
-      tickSignal(time);
-    }
-
-    if (!introLock) {
-      if (reducedMotion) {
-        rig.x = 0;
-        rig.y = 0.2;
-        rig.z = 6.2;
-        rig.lookY = 0.05;
-      } else {
-        rig.x = pointer.x * 0.28;
-        rig.y = 0.18 + pointer.y * 0.14;
-        rig.z = 6.4 + scroll * 1.6;
-        rig.lookY = 0.04 - scroll * 0.22;
+    if (frames > 90) {
+      if (delta > 0.022) hotFrames += 1;
+      else hotFrames = Math.max(0, hotFrames - 1);
+      if (hotFrames > 30 && pixelRatio > 1.05) {
+        pixelRatio = Math.max(1, Math.round((pixelRatio - 0.15) * 100) / 100);
+        resize();
+        hotFrames = 0;
       }
     }
 
-    camera.position.set(rig.x, rig.y, rig.z);
-    if (Math.abs(camera.fov - rig.fov) > 0.01) {
-      camera.fov = rig.fov;
-      camera.updateProjectionMatrix();
+    pointer.x += (pointerTarget.x - pointer.x) * 0.04;
+    pointer.y += (pointerTarget.y - pointer.y) * 0.04;
+
+    if (introLock) {
+      applyRig(rig);
+    } else {
+      const shot = sampleShot(scroll);
+      const driftX = Math.sin(time * 0.07) * 0.22 + pointer.x * 0.28;
+      const driftY = Math.sin(time * 0.05) * 0.035 + pointer.y * 0.05;
+      const lookX = pointer.x * 0.45;
+      const lookY = pointer.y * 0.1;
+      applyRig(
+        {
+          ...shot,
+          x: shot.x,
+          y: shot.y,
+          z: shot.z,
+          lx: shot.lx,
+          ly: shot.ly,
+          lz: shot.lz,
+          fov: shot.fov,
+          sunY: shot.sunY,
+          night: shot.night,
+        },
+        driftX,
+        driftY,
+        lookX,
+        lookY,
+      );
     }
-    camera.lookAt(0, rig.lookY, -8);
 
-    if (bloomPass) bloomPass.strength = bloom.strength;
-    if (composer) composer.render();
-    else renderer.render(scene, camera);
-
+    draw();
     if (running) raf = requestAnimationFrame(tick);
   };
 
   const observer = new ResizeObserver(resize);
   observer.observe(canvas);
   window.addEventListener("pointermove", onPointer, { passive: true });
-  document.addEventListener("visibilitychange", () => {
-    if (document.hidden) {
-      running = false;
-      cancelAnimationFrame(raf);
-      return;
-    }
-    if (!running) {
-      running = true;
-      clock.getDelta();
-      tick();
-    }
-  });
-
-  tickField();
-  tickOrbits(0);
-  tickSignal(0);
+  document.addEventListener("visibilitychange", onVisibility);
   resize();
-  tick();
 
-  /** Warp in, then hand control back to pointer / scroll. */
+  if (reducedMotion) {
+    introLock = false;
+    applyRig(HERO);
+    uniforms.uTime.value = 16;
+    draw();
+  } else {
+    applyRig(rig);
+    tick();
+  }
+
   const playIntro = () => {
-    if (reducedMotion) {
-      introLock = false;
-      setAtmosOpacity(atmos.fade);
-      return Promise.resolve();
-    }
-    meteorState.wait = 0.55;
-    renderer.toneMappingExposure = 0.05;
+    if (reducedMotion) return Promise.resolve();
     return new Promise((resolve) => {
       const tl = gsap.timeline({
         onComplete() {
           introLock = false;
-          gsap.to(atmos, { fade: 1, duration: 1.6, ease: "power2.out" });
           resolve();
         },
       });
       tl.to(
         rig,
         {
-          x: 0,
-          y: 0.16,
-          z: 6.2,
-          fov: 50,
-          lookY: 0.02,
-          starSpin: 0.018,
-          pathSpin: 0.01,
-          duration: 2.85,
-          ease: "power4.inOut",
+          x: HERO.x,
+          y: HERO.y,
+          z: HERO.z,
+          lx: HERO.lx,
+          ly: HERO.ly,
+          lz: HERO.lz,
+          fov: HERO.fov,
+          duration: 4.4,
+          ease: "power3.inOut",
         },
         0,
       );
-      tl.to(
-        rig,
-        {
-          y: 0.18,
-          z: 6.4,
-          fov: 48,
-          lookY: 0.04,
-          duration: 0.5,
-          ease: "power2.out",
-        },
-        2.85,
-      );
-      tl.to(
-        starField.scale,
-        {
-          z: 1,
-          duration: 3.05,
-          ease: "power3.out",
-        },
-        0,
-      );
-      tl.to(
-        renderer,
-        {
-          toneMappingExposure: 1.18,
-          duration: 2.3,
-          ease: "power2.out",
-        },
-        0.12,
-      );
-      tl.to(
-        renderer,
-        {
-          toneMappingExposure: 1.02,
-          duration: 0.7,
-          ease: "power1.out",
-        },
-        2.6,
-      );
-      if (bloomPass) {
-        tl.to(bloom, { strength: 0.42, duration: 1.5, ease: "power2.out" }, 0.15);
-        tl.to(bloom, { strength: 0.18, duration: 1, ease: "power2.inOut" }, 2.1);
-      }
+      tl.to(grade, { exposure: 1.05, duration: 3.15, ease: "power2.out" }, 0.25);
     });
   };
 
   return {
     playIntro,
     setScroll(value) {
-      scroll = value;
+      scroll = Math.min(Math.max(value, 0), 1);
     },
     setActive(active) {
+      if (reducedMotion) return;
       if (active) {
         if (!running && !document.hidden) {
           running = true;
@@ -633,20 +563,15 @@ export function createHeroScene(canvas, { reducedMotion = false } = {}) {
       running = false;
       cancelAnimationFrame(raf);
       gsap.killTweensOf(rig);
-      gsap.killTweensOf(starField.scale);
-      gsap.killTweensOf(renderer);
-      gsap.killTweensOf(bloom);
-      gsap.killTweensOf(atmos);
+      gsap.killTweensOf(grade);
       observer.disconnect();
-      composer?.dispose();
       window.removeEventListener("pointermove", onPointer);
-      scene.traverse((object) => {
-        if (object.geometry) object.geometry.dispose();
-        if (object.material) {
-          const materials = Array.isArray(object.material) ? object.material : [object.material];
-          materials.forEach((material) => material.dispose());
-        }
-      });
+      document.removeEventListener("visibilitychange", onVisibility);
+      composer?.dispose();
+      sky.geometry.dispose();
+      ocean.geometry.dispose();
+      sky.material.dispose();
+      ocean.material.dispose();
       renderer.dispose();
     },
   };
