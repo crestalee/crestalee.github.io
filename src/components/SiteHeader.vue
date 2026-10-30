@@ -4,6 +4,7 @@
     <nav>
       <a href="#work">{{ t.nav.work }}</a>
       <a href="#note">{{ t.nav.note }}</a>
+      <SoundToggle />
       <LangToggle />
     </nav>
   </header>
@@ -13,6 +14,7 @@
 import { site } from "../data/site.js";
 import { useLocale } from "../composables/useLocale.js";
 import LangToggle from "./LangToggle.vue";
+import SoundToggle from "./SoundToggle.vue";
 
 const { t } = useLocale();
 </script>

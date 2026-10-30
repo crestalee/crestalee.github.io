@@ -40,6 +40,7 @@ npm run preview
 - ACES Filmic 色调，半分辨率柔光只吃太阳和反光
 - 远处用雾收进天际，免得海平面露出一条硬边
 - Lenis 平滑滚动。滚动进度驱动镜头，不另做一套 HUD
+- 配乐是循环的 _Silent Descent_（Eugenio Mininni）。浏览器不让页面自己出声，点一下画面，或点导航里的「声音」，音乐会淡进来。音量大约三成
 
 桌面像素比封顶约 1.35。如果一帧超过 22ms，会再降一点，好让轻薄本维持在 60fps 附近。
 
@@ -51,4 +52,6 @@ npm run preview
 
 ## 许可
 
-[MIT](./LICENSE)
+画面与代码基于 [MIT](./LICENSE)。
+
+背景音乐不在 MIT 里。_Silent Descent_，Eugenio Mininni，[Mixkit Stock Music Free License](https://mixkit.co/license/)（可商用）。曲目页：[Silent Descent](https://mixkit.co/free-stock-music/discover/silent-descent-614/)。文件是 `public/audio/silent-descent.mp3`。
