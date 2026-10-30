@@ -12,6 +12,11 @@ export const copy = {
       work: "Work",
       note: "Note",
     },
+    sound: {
+      label: "Sound",
+      play: "Play music",
+      mute: "Mute music",
+    },
     hero: {
       line: "Software, beside the water.",
       scroll: "Scroll",
@@ -31,6 +36,7 @@ export const copy = {
     },
     footer: {
       top: "Top",
+      music: "Music",
     },
   },
   zh: {
@@ -44,6 +50,11 @@ export const copy = {
     nav: {
       work: "作品",
       note: "信",
+    },
+    sound: {
+      label: "声音",
+      play: "播放配乐",
+      mute: "关闭配乐",
     },
     hero: {
       line: "软件，在水边。",
@@ -64,6 +75,7 @@ export const copy = {
     },
     footer: {
       top: "顶部",
+      music: "配乐",
     },
   },
 };

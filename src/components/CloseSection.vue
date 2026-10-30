@@ -15,15 +15,40 @@
       </div>
     </div>
     <footer class="footer">
-      <a href="#top">{{ t.footer.top }}</a>
-      <span>© {{ site.year }}</span>
+      <p class="score-credit">
+        <span>{{ t.footer.music }}</span>
+        <span aria-hidden="true"> · </span>
+        <a
+          :href="score.page"
+          :title="`${score.title} — ${score.artist}`"
+          target="_blank"
+          rel="noreferrer noopener"
+          >{{ score.title }}</a
+        >
+        <span aria-hidden="true"> — </span>
+        <span>{{ score.artist }}</span>
+        <span aria-hidden="true"> · </span>
+        <a
+          :href="score.licenseUrl"
+          :title="score.license"
+          target="_blank"
+          rel="noreferrer noopener"
+        >
+          Mixkit
+          <span class="sr"> {{ score.license }}</span>
+        </a>
+      </p>
+      <div class="footer-bar">
+        <a href="#top">{{ t.footer.top }}</a>
+        <span>© {{ site.year }}</span>
+      </div>
     </footer>
   </section>
 </template>
 
 <script setup>
 import { onUnmounted, ref } from "vue";
-import { site } from "../data/site.js";
+import { score, site } from "../data/site.js";
 import { useLocale } from "../composables/useLocale.js";
 
 const { t } = useLocale();
